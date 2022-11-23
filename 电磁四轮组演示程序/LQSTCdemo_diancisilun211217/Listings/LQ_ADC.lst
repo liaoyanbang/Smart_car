@@ -1,0 +1,184 @@
+C251 COMPILER V5.60.0,  LQ_ADC                                                             21/12/21  22:07:37  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE LQ_ADC
+OBJECT MODULE PLACED IN .\Objects\LQ_ADC.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE user\LQ_ADC.c LARGE INTR2 BROWSE INCDIR(.\user;.\user\Dianci) DEBUG PR
+                    -INT(.\Listings\LQ_ADC.lst) TABS(2) OBJECT(.\Objects\LQ_ADC.obj) 
+
+stmt  level    source
+
+    1          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+    2          【平    台】北京龙邱智能科技STC16核心板
+    3          【编    写】chiusir
+    4          【E-mail  】chiusir@163.com
+    5          【软件版本】V1.1 版权所有，单位使用请先联系授权
+    6          【最后更新】2021年1月23日
+    7          【相关信息参考下列地址】
+    8          【网    站】http://www.lqist.cn
+    9          【淘宝店铺】http://longqiu.taobao.com
+   10          ------------------------------------------------
+   11          【IDE】STC16
+   12          【Target 】 C251Keil5.6及以上
+   13          【SYS PLL】 30MHz使用内部晶振
+   14          =================================================================
+   15          STC16相关配套视频：
+   16          龙邱科技B站网址：https://space.bilibili.com/95313236
+   17          STC16环境下载参考视频： https://www.bilibili.com/video/BV1gy4y1p7T1/
+   18          STC16一体板子介绍视频： https://www.bilibili.com/video/BV1Jy4y1e7R4/
+   19          =================================================================
+   20          下载时, 选择时钟 30MHZ (用户可自行修改频率).
+   21          STC16F初次下载:先用IRCBND=0，ISP界面设置为24M，
+   22          然后IRCBND=0，下载频率为30M；
+   23          或者IRCBND=1，下载频率为30M；好用为准
+   24          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   25          #include "include.h"
+   26          
+   27          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   28          【函数名】ADC1_SingleChannel_Get(uint8_t ADC_Channel_x) 
+   29          【功  能】获取ADC转换数据
+   30          【参数值】ADC_Channel_x , x为0~11
+   31          【返回值】ADC读到的值，默认是12位
+   32          【最后更新】2021年1月22日 
+   33          【软件版本】V1.0
+   34          【使用举例】x=ADC_Read(8); //读取ADC8通道值
+   35          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   36          u16 ADC_Read(uint8 ADC_Channel_x)
+   37          { 
+   38   1        unsigned short data temp;
+   39   1        
+   40   1        ADC_RES = 0;
+   41   1        ADC_RESL = 0;
+   42   1        
+   43   1        ADC_CONTR &= 0xF0;
+   44   1        ADC_CONTR = ADC_CONTR | 0x40 | ADC_Channel_x;    //启动 AD 转换
+   45   1        _nop_();
+   46   1        _nop_();
+   47   1        _nop_();
+   48   1        _nop_();
+   49   1        
+   50   1        while((ADC_CONTR & 0x20) == 0)  ;   //wait for ADC finish
+   51   1        ADC_CONTR &= ~0x20;           //清除ADC结束标志
+   52   1        temp = ADC_RES & 0x0F;
+   53   1        temp = (temp<<8) | ADC_RESL;
+   54   1        return temp;            //默认是12位
+   55   1      }
+   56          
+   57          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   58          【函数名】u16 ADC_Read_Average(uint8 ADC_Channel_x,uint8 times)
+C251 COMPILER V5.60.0,  LQ_ADC                                                             21/12/21  22:07:37  PAGE 2   
+
+   59          【功  能】获取几次ADC1采样值的平均值
+   60          【参数值】ADC_Channel_x , x为0~11
+   61          【返回值】ADC读到的值
+   62          【作  者】chiusir
+   63          【最后更新】2021年1月22日 
+   64          【软件版本】V1.0
+   65          【使用举例】x=ADC_Read(8,10); //读取ADC8通道值,10次均值
+   66          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   67          u16 ADC_Read_Average(uint8 ADC_Channel_x,uint8 times)
+   68          {
+   69   1        u32 temp_val=0;
+   70   1        u8 t;
+   71   1        u8 delay;
+   72   1        for(t=0;t<times;t++)
+   73   1        {
+   74   2          temp_val+=ADC_Read(ADC_Channel_x);
+   75   2          for(delay=0;delay<100;delay++);
+   76   2        }
+   77   1        return temp_val/times;
+   78   1      } 
+   79          
+   80          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   81          【函数名】void ADC_Init (void)
+   82          【功  能】四个电感ADC初始化函数；
+   83          【参数值】无
+   84          【返回值】无 
+   85          【作  者】chiusir
+   86          【最后更新】2021年1月22日 
+   87          【软件版本】V1.0
+   88          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   89          void ADC_Init (void)
+   90          {
+   91   1        P_SW2 |= 0x80;
+   92   1        ADCTIM = 0x3f;          //设置 ADC 内部时序，ADC采样时间建议设最大值
+   93   1        P_SW2 &= 0x7f;
+   94   1        ADCCFG |= 0x2f;         //设置 ADC 时钟为系统时钟/2/16/16
+   95   1        ADC_CONTR = 0x80;       //使能 ADC 模块
+   96   1      }
+   97          
+   98          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   99          【函数名】void Test_ADC(void)
+  100          【功  能】测试程序，屏幕显示ADC采集的电感值
+  101          【参数值】无
+  102          【返回值】无 
+  103          【作  者】chiusir
+  104          【最后更新】2021年1月22日 
+  105          【软件版本】V1.0
+  106          【使用举例】
+  107          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+  108          void Test_ADC(void)
+  109          {
+  110   1        char txt[30]; 
+  111   1        unsigned int data diangan[4];
+  112   1        
+  113   1        OLED_Init();    // OLED初始化
+  114   1        OLED_CLS();   // 清屏   
+  115   1        OLED_P14x16Str(0,2,(unsigned char*)"北京龙邱智能科技");   // 字符串显示
+  116   1        OLED_P6x8Str(0,4,"Long Qiu i.s.t.");            // 字符串显示
+  117   1        delayms(1000);  // 延时等待
+  118   1        OLED_CLS();     // 清屏   
+  119   1        ADC_Init();   // ADC初始化
+  120   1        while(1)
+  121   1        {
+  122   2          diangan[0]=ADC_Read(8);       // 读取ADC8通道值
+  123   2          diangan[1]=ADC_Read(9);     // 读取ADC9通道值
+  124   2          diangan[2]=ADC_Read(10);    // 读取ADC10通道值
+C251 COMPILER V5.60.0,  LQ_ADC                                                             21/12/21  22:07:37  PAGE 3   
+
+  125   2          diangan[3]=ADC_Read(11);    // 读取ADC11通道值  
+  126   2          sprintf(txt,"AD0:%05d ",diangan[0]);  // 显示ADC8的值
+  127   2          OLED_P8x16Str(0,0,(u8*)txt);
+  128   2          sprintf(txt,"AD1:%05d ",diangan[1]);  // 显示ADC9的值
+  129   2          OLED_P8x16Str(0,2,(u8*)txt);
+  130   2          sprintf(txt,"AD2:%05d ",diangan[2]);  // 显示ADC10的值
+  131   2          OLED_P8x16Str(0,4,(u8*)txt);
+  132   2          sprintf(txt,"AD3:%05d ",diangan[3]);  // 显示ADC11的值
+  133   2          OLED_P8x16Str(0,6,(u8*)txt);
+  134   2        }
+  135   1      }
+  136          
+  137          
+  138          
+  139          
+  140          
+  141          
+  142          
+  143          
+  144          
+  145          
+  146          
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       409     ------
+  ecode size           =    ------     ------
+  data size            =    ------          8
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------         34
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        73     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

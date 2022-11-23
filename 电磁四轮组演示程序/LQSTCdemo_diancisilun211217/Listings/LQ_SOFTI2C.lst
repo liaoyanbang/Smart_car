@@ -1,0 +1,518 @@
+C251 COMPILER V5.60.0,  LQ_SOFTI2C                                                         21/12/21  22:07:38  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE LQ_SOFTI2C
+OBJECT MODULE PLACED IN .\Objects\LQ_SOFTI2C.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE user\LQ_SOFTI2C.c LARGE INTR2 BROWSE INCDIR(.\user;.\user\Dianci) DEBU
+                    -G PRINT(.\Listings\LQ_SOFTI2C.lst) TABS(2) OBJECT(.\Objects\LQ_SOFTI2C.obj) 
+
+stmt  level    source
+
+    1          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+    2          【平    台】北京龙邱智能科技STC16核心板
+    3          【编    写】chiusir
+    4          【E-mail  】chiusir@163.com
+    5          【软件版本】V1.1 版权所有，单位使用请先联系授权
+    6          【最后更新】2021年1月23日
+    7          【相关信息参考下列地址】
+    8          【网    站】http://www.lqist.cn
+    9          【淘宝店铺】http://longqiu.taobao.com
+   10          ------------------------------------------------
+   11          【IDE】STC16
+   12          【Target 】 C251Keil5.6及以上
+   13          【SYS PLL】 30MHz使用内部晶振
+   14          =================================================================
+   15          STC16相关配套视频：
+   16          龙邱科技B站网址：https://space.bilibili.com/95313236
+   17          STC16环境下载参考视频： https://www.bilibili.com/video/BV1gy4y1p7T1/
+   18          STC16一体板子介绍视频： https://www.bilibili.com/video/BV1Jy4y1e7R4/
+   19          =================================================================
+   20          下载时, 选择时钟 30MHZ (用户可自行修改频率).
+   21          STC16F初次下载:先用IRCBND=0，ISP界面设置为24M，
+   22          然后IRCBND=0，下载频率为30M；
+   23          或者IRCBND=1，下载频率为30M；好用为准
+   24          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   25          #include "LQ_SOFTI2C.h"
+   26          #include "include.h"
+   27          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   28          【函数名】
+   29          【功  能】延时函数
+   30          【参数值】ms /30M
+   31          【返回值】无 
+   32          【作  者】chiusir
+   33          【最后更新】2021年1月22日 
+   34          【软件版本】V1.0
+   35          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   36          void  delayms(unsigned int ms)
+   37          {
+   38   1        unsigned int i;
+   39   1        do{    
+   40   2          i=MAIN_Fosc/6000;//大约1毫秒
+   41   2          while(--i);
+   42   2        }while(--ms);
+   43   1      }
+   44          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   45          【函数名】void delayus(unsigned int us)
+   46          【功  能】延时函数
+   47          【参数值】us /30M
+   48          【返回值】无 
+   49          【作  者】chiusir
+   50          【最后更新】2021年1月22日 
+   51          【软件版本】V1.0
+   52          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   53          void  delayus(unsigned int us)
+   54          {
+   55   1        unsigned int i;
+   56   1        do{    
+   57   2          i=MAIN_Fosc/6000001;//大约1us
+   58   2          while(--i);
+C251 COMPILER V5.60.0,  LQ_SOFTI2C                                                         21/12/21  22:07:38  PAGE 2   
+
+   59   2        }while(--us);
+   60   1      }
+   61          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   62          【函数名】void SOFT_IIC_Init(void)
+   63          【功  能】初始化I2C对应的接口引脚。
+   64          【参数值】无
+   65          【返回值】无 
+   66          【作  者】chiusir
+   67          【最后更新】2021年1月22日 
+   68          【软件版本】V1.0
+   69          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   70          void SOFT_IIC_Init(void)
+   71          {     
+   72   1        P2M1 &= 0xCF;
+   73   1        P2M1 |= 0x00;
+   74   1        P2M0 &= 0xCF;
+   75   1        P2M0 |= 0x20;   //SCL设置为推挽输出，SDA设为准双向口
+   76   1      }
+   77          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   78          【函数名】void SOFT_IIC_Start(void)
+   79          【功  能】产生IIC起始信号
+   80          【参数值】无
+   81          【返回值】无 
+   82          【作  者】chiusir
+   83          【最后更新】2021年1月22日 
+   84          【软件版本】V1.0
+   85          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   86          int SOFT_IIC_Start(void)
+   87          {
+   88   1        //SDA_OUT();     //sda线输出
+   89   1        SOFT_IIC_SDA=1;
+   90   1        if(!READ_SDA)return 0;  
+   91   1        SOFT_IIC_SCL=1;
+   92   1        delayus(1);
+   93   1        SOFT_IIC_SDA=0; //START:when CLK is high,DATA change form high to low 
+   94   1        delayus(2); //T(hold,start) > 0.6us
+   95   1        if(READ_SDA)return 0; //需要放到延时后面
+   96   1        SOFT_IIC_SCL=0; //钳住I2C总线，准备发送或接收数据 
+   97   1        return 1;
+   98   1      }
+   99          
+  100          /**************************实现函数********************************************
+  101          *函数原型:    void SOFT_IIC_Stop(void)
+  102          *功　　能:      //产生IIC停止信号
+  103          *******************************************************************************/    
+  104          void SOFT_IIC_Stop(void)
+  105          {
+  106   1        //SDA_OUT();//sda线输出
+  107   1        SOFT_IIC_SCL=0;
+  108   1        delayus(1);
+  109   1        SOFT_IIC_SDA=0;//STOP:when CLK is high DATA change form low to high
+  110   1        delayus(1);
+  111   1        SOFT_IIC_SCL=1; 
+  112   1        delayus(1);
+  113   1        SOFT_IIC_SDA=1;//发送I2C总线结束信号
+  114   1        delayus(1);                 
+  115   1      }
+  116          
+  117          /**************************实现函数********************************************
+  118          *函数原型:    unsigned char SOFT_IIC_Wait_Ack(void)
+  119          *功　　能:      等待应答信号到来 
+  120          //返回值：1，接收应答失败
+  121          //        0，接收应答成功
+  122          *******************************************************************************/
+  123          int SOFT_IIC_Wait_Ack(void)
+  124          {
+C251 COMPILER V5.60.0,  LQ_SOFTI2C                                                         21/12/21  22:07:38  PAGE 3   
+
+  125   1        unsigned char ucErrTime=0;
+  126   1        //SDA_IN();      //SDA设置为输入  
+  127   1        //  delay_us(1);
+  128   1        SOFT_IIC_SDA=1;   // 先释放SDA线
+  129   1        delayus(2);    
+  130   1        SOFT_IIC_SCL=1;
+  131   1        delayus(1);  
+  132   1        while(READ_SDA)
+  133   1        {
+  134   2          ucErrTime++; 
+  135   2          if(ucErrTime>50)
+  136   2          {
+  137   3            SOFT_IIC_Stop();
+  138   3            return 0;
+  139   3          }
+  140   2          delayus(1);
+  141   2        }
+  142   1        SOFT_IIC_SCL=0;//时钟输出0     
+  143   1        return 1;  
+  144   1      } 
+  145          
+  146          /**************************实现函数********************************************
+  147          *函数原型:    void SOFT_IIC_Ack(void)
+  148          *功　　能:      产生ACK应答
+  149          *******************************************************************************/
+  150          void SOFT_IIC_Ack(void)
+  151          {
+  152   1        SOFT_IIC_SCL=0;
+  153   1        //SDA_OUT();
+  154   1        SOFT_IIC_SDA=0;
+  155   1        delayus(1);
+  156   1        SOFT_IIC_SCL=1;
+  157   1        delayus(1);
+  158   1        SOFT_IIC_SCL=0;
+  159   1        SOFT_IIC_SDA=1;   //释放SDA线
+  160   1      }
+  161          
+  162          /**************************实现函数********************************************
+  163          *函数原型:    void SOFT_IIC_NAck(void)
+  164          *功　　能:      产生NACK应答
+  165          *******************************************************************************/      
+  166          void SOFT_IIC_NAck(void)
+  167          {
+  168   1        SOFT_IIC_SCL=0;
+  169   1        //SDA_OUT();
+  170   1        delayus(1);
+  171   1        SOFT_IIC_SDA=1;
+  172   1        delayus(1);
+  173   1        SOFT_IIC_SCL=1;
+  174   1        delayus(2);
+  175   1        SOFT_IIC_SCL=0;
+  176   1      }
+  177          /**************************实现函数********************************************
+  178          *函数原型:    void SOFT_IIC_Send_Byte(unsigned char txd)
+  179          *功　　能:      IIC发送一个字节
+  180          *******************************************************************************/      
+  181          void SOFT_IIC_Send_Byte(unsigned char txd)
+  182          {                        
+  183   1        unsigned char t;   
+  184   1        //SDA_OUT();      
+  185   1        SOFT_IIC_SCL=0;//拉低时钟开始数据传输
+  186   1        delayus(1);
+  187   1        for(t=0;t<8;t++)
+  188   1        {            
+  189   2          SOFT_IIC_SDA=(txd&0x80)>>7;
+  190   2          delayus(1);   
+C251 COMPILER V5.60.0,  LQ_SOFTI2C                                                         21/12/21  22:07:38  PAGE 4   
+
+  191   2          SOFT_IIC_SCL=1;
+  192   2          txd<<=1;    
+  193   2          delayus(2); 
+  194   2          SOFT_IIC_SCL=0; 
+  195   2          delayus(1);  
+  196   2        }
+  197   1        SOFT_IIC_SDA = 1;  // 发送完拉高释放SDA
+  198   1        delayus(1);
+  199   1      }    
+  200          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+  201          【函数名】bool i2cWrite(unsigned char addr, unsigned char reg, unsigned char dat)
+  202          【功  能】向addr设备的reg地址写len字节数据*dat，与龙邱DMP库接口，必须一致
+  203          【参数值】unsigned char addr  设备地址
+  204          【参数值】unsigned char reg   要写入的寄存器
+  205          【参数值】unsigned int  len   数据长度
+  206          【参数值】unsigned char *dat  数据指针
+  207          【返回值】0：成功   1：失败 
+  208          【作  者】chiusir
+  209          【最后更新】2021年1月22日 
+  210          【软件版本】V1.0
+  211          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+  212          int LQ_I2C_Write(unsigned char addr, unsigned char reg, unsigned int len, unsigned char *dat)
+  213          {
+  214   1        unsigned int data i = 0;    // 连这个也要加data
+  215   1        unsigned int data length = len;
+  216   1        if (!SOFT_IIC_Start())
+  217   1          return 1;
+  218   1        SOFT_IIC_Send_Byte(addr << 1);
+  219   1        if (!SOFT_IIC_Wait_Ack()) 
+  220   1        {
+  221   2          SOFT_IIC_Stop();
+  222   2          return 2;
+  223   2        }
+  224   1        SOFT_IIC_Send_Byte(reg);
+  225   1        SOFT_IIC_Wait_Ack();
+  226   1        for (i = 0; i < length; i++) 
+  227   1        {
+  228   2          SOFT_IIC_Send_Byte(dat[i]);
+  229   2          if (!SOFT_IIC_Wait_Ack()) {
+  230   3            SOFT_IIC_Stop();
+  231   3            return 3;
+  232   3          }
+  233   2          else
+  234   2            ;
+  235   2        }
+  236   1        SOFT_IIC_Stop();
+  237   1        return 0;
+  238   1      }
+  239          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+  240          【函数名】int LQ_I2C_Read(unsigned char addr, unsigned char reg, unsigned int len, unsigned char *buf)
+  241          【功  能】向addr设备的reg地址取len字节数据存放在*buf，与龙邱DMP库接口，必须一致
+  242          【参数值】unsigned char addr  设备地址
+  243          【参数值】unsigned char reg   要写入的寄存器
+  244          【参数值】unsigned int  len   数据长度
+  245          【参数值】unsigned char *buf  数据指针
+  246          【返回值】0：成功   1：失败  
+  247          【作  者】chiusir
+  248          【最后更新】2021年1月22日 
+  249          【软件版本】V1.0
+  250          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+  251          int LQ_I2C_Read(unsigned char addr, unsigned char reg, unsigned int len, unsigned char *buf)
+  252          {
+  253   1        unsigned int data length = len;
+  254   1        if (SOFT_IIC_Start() == 0)
+  255   1          return 1;
+  256   1        SOFT_IIC_Send_Byte((unsigned char)(addr << 1));
+C251 COMPILER V5.60.0,  LQ_SOFTI2C                                                         21/12/21  22:07:38  PAGE 5   
+
+  257   1        if (SOFT_IIC_Wait_Ack() == 0) 
+  258   1        {
+  259   2          SOFT_IIC_Stop();
+  260   2          return 2;
+  261   2        }
+  262   1        SOFT_IIC_Send_Byte(reg);
+  263   1        SOFT_IIC_Wait_Ack();
+  264   1        delayus(2);         //应该需要一定延时。
+  265   1        while(SOFT_IIC_Start() == 0);
+  266   1        SOFT_IIC_Send_Byte((unsigned char)((addr << 1)+1));
+  267   1        SOFT_IIC_Wait_Ack();
+  268   1        while (length) 
+  269   1        {
+  270   2          if (length == 1)
+  271   2            *buf = SOFT_IIC_Read_Byte(0);
+  272   2          else
+  273   2            *buf = SOFT_IIC_Read_Byte(1);
+  274   2          buf++;
+  275   2          length--;
+  276   2        }
+  277   1        SOFT_IIC_Stop();
+  278   1        return 0;
+  279   1      }
+  280          
+  281          
+  282          /**************************实现函数********************************************
+  283          *函数原型:    unsigned char SOFT_IIC_Read_Byte(unsigned char ack)
+  284          *功　　能:      //读1个字节，ack=1时，发送ACK，ack=0，发送nACK 
+  285          *******************************************************************************/  
+  286          unsigned char SOFT_IIC_Read_Byte(unsigned char ack)
+  287          {
+  288   1        unsigned char i,receive=0;
+  289   1        //SDA_IN();//SDA设置为输入
+  290   1        for(i=0;i<8;i++ )
+  291   1        {
+  292   2          SOFT_IIC_SCL=0; 
+  293   2          delayus(2);
+  294   2          SOFT_IIC_SCL=1;
+  295   2          receive<<=1;
+  296   2          if(READ_SDA)receive++;   
+  297   2          delayus(2); 
+  298   2        }          
+  299   1        if(ack)
+  300   1          SOFT_IIC_Ack(); //发送ACK 
+  301   1        else
+  302   1          SOFT_IIC_NAck();//发送nACK  
+  303   1        return receive;
+  304   1      }
+  305          
+  306          /**************************实现函数********************************************
+  307          *函数原型:    unsigned char I2C_ReadOneByte(unsigned char I2C_Addr,unsigned char addr)
+  308          *功　　能:      读取指定设备 指定寄存器的一个值
+  309          输入  I2C_Addr  目标设备地址
+  310          addr     寄存器地址
+  311          返回   读出来的值
+  312          *******************************************************************************/ 
+  313          unsigned char I2C_ReadOneByte(unsigned char I2C_Addr,unsigned char addr)
+  314          {
+  315   1        unsigned char res=0;
+  316   1        
+  317   1        SOFT_IIC_Start(); 
+  318   1        SOFT_IIC_Send_Byte(I2C_Addr);    //发送写命令
+  319   1        res++;
+  320   1        SOFT_IIC_Wait_Ack();
+  321   1        SOFT_IIC_Send_Byte(addr); res++;  //发送地址
+  322   1        SOFT_IIC_Wait_Ack();    
+C251 COMPILER V5.60.0,  LQ_SOFTI2C                                                         21/12/21  22:07:38  PAGE 6   
+
+  323   1        //SOFT_IIC_Stop();//产生一个停止条件  
+  324   1        SOFT_IIC_Start();
+  325   1        SOFT_IIC_Send_Byte((unsigned char)(I2C_Addr+1)); res++;          //进入接收模式        
+  326   1        SOFT_IIC_Wait_Ack();
+  327   1        res=SOFT_IIC_Read_Byte(0);     
+  328   1        SOFT_IIC_Stop();//产生一个停止条件
+  329   1        
+  330   1        return res;
+  331   1      }
+  332          
+  333          
+  334          /**************************实现函数********************************************
+  335          *函数原型:    unsigned char IICreadBytes(unsigned char dev, unsigned char reg, unsigned char length, unsign
+             -ed char *dat)
+  336          *功　　能:      读取指定设备 指定寄存器的 length个值
+  337          输入  dev  目标设备地址
+  338          reg   寄存器地址
+  339          length 要读的字节数
+  340          *dat  读出的数据将要存放的指针
+  341          返回   读出来的字节数量
+  342          *******************************************************************************/ 
+  343          unsigned char IICreadBytes(unsigned char dev, unsigned char reg, unsigned char length, unsigned char *dat
+             -)
+  344          {
+  345   1        unsigned char count = 0;
+  346   1        
+  347   1        SOFT_IIC_Start();
+  348   1        SOFT_IIC_Send_Byte(dev);     //发送写命令
+  349   1        SOFT_IIC_Wait_Ack();
+  350   1        SOFT_IIC_Send_Byte(reg);   //发送地址
+  351   1        SOFT_IIC_Wait_Ack();    
+  352   1        SOFT_IIC_Start();
+  353   1        SOFT_IIC_Send_Byte((unsigned char)(dev+1));  //进入接收模式 
+  354   1        SOFT_IIC_Wait_Ack();
+  355   1        
+  356   1        for(count=0;count<length;count++){
+  357   2          
+  358   2          if(count!=length-1)dat[count]=SOFT_IIC_Read_Byte(1);  //带ACK的读数据
+  359   2          else  dat[count]=SOFT_IIC_Read_Byte(0);  //最后一个字节NACK
+  360   2        }
+  361   1        SOFT_IIC_Stop();//产生一个停止条件
+  362   1        return count;
+  363   1      }
+  364          
+  365          /**************************实现函数********************************************
+  366          *函数原型:    unsigned char IICwriteBytes(unsigned char dev, unsigned char reg, unsigned char length, unsig
+             -ned char* dat)
+  367          *功　　能:      将多个字节写入指定设备 指定寄存器
+  368          输入  dev  目标设备地址
+  369          reg   寄存器地址
+  370          length 要写的字节数
+  371          *dat  将要写的数据的首地址
+  372          返回   返回是否成功
+  373          *******************************************************************************/ 
+  374          unsigned char IICwriteBytes(unsigned char dev, unsigned char reg, unsigned char length, unsigned char* da
+             -t){
+  375   1        
+  376   1        unsigned char count = 0;
+  377   1        SOFT_IIC_Start();
+  378   1        SOFT_IIC_Send_Byte(dev);     //发送写命令
+  379   1        SOFT_IIC_Wait_Ack();
+  380   1        SOFT_IIC_Send_Byte(reg);   //发送地址
+  381   1        SOFT_IIC_Wait_Ack();    
+  382   1        for(count=0;count<length;count++){
+  383   2          SOFT_IIC_Send_Byte(dat[count]); 
+  384   2          SOFT_IIC_Wait_Ack(); 
+C251 COMPILER V5.60.0,  LQ_SOFTI2C                                                         21/12/21  22:07:38  PAGE 7   
+
+  385   2        }
+  386   1        SOFT_IIC_Stop();//产生一个停止条件
+  387   1        
+  388   1        return 1; //status == 0;
+  389   1      }
+  390          
+  391          /**************************实现函数********************************************
+  392          *函数原型:    unsigned char IICreadByte(unsigned char dev, unsigned char reg, unsigned char *dat)
+  393          *功　　能:      读取指定设备 指定寄存器的一个值
+  394          输入  dev  目标设备地址
+  395          reg    寄存器地址
+  396          *dat  读出的数据将要存放的地址
+  397          返回   1
+  398          *******************************************************************************/ 
+  399          unsigned char IICreadByte(unsigned char dev, unsigned char reg, unsigned char *dat)
+  400          {
+  401   1        *dat=I2C_ReadOneByte(dev, reg);
+  402   1        return 1;
+  403   1      }
+  404          
+  405          /**************************实现函数********************************************
+  406          *函数原型:    unsigned char IICwriteByte(unsigned char dev, unsigned char reg, unsigned char dat)
+  407          *功　　能:      写入指定设备 指定寄存器一个字节
+  408          输入  dev  目标设备地址
+  409          reg    寄存器地址
+  410          dat  将要写入的字节
+  411          返回   1
+  412          *******************************************************************************/ 
+  413          unsigned char IICwriteByte(unsigned char dev, unsigned char reg, unsigned char dat)
+  414          {
+  415   1        return IICwriteBytes(dev, reg, 1, &dat);
+  416   1      }
+  417          
+  418          /**************************实现函数********************************************
+  419          *函数原型:    unsigned char IICwriteBits(unsigned char dev,unsigned char reg,unsigned char bitStart,unsigne
+             -d char length,unsigned char dat)
+  420          *功　　能:      读 修改 写 指定设备 指定寄存器一个字节 中的多个位
+  421          输入  dev  目标设备地址
+  422          reg    寄存器地址
+  423          bitStart  目标字节的起始位
+  424          length   位长度
+  425          dat    存放改变目标字节位的值
+  426          返回   成功 为1 
+  427          失败为0
+  428          *******************************************************************************/ 
+  429          unsigned char IICwriteBits(unsigned char dev,unsigned char reg,unsigned char bitStart,unsigned char lengt
+             -h,unsigned char dat)
+  430          {
+  431   1        
+  432   1        unsigned char b;
+  433   1        if (IICreadByte(dev, reg, &b) != 0) {
+  434   2          unsigned char mask = (0xFF << (bitStart + 1)) | 0xFF >> ((8 - bitStart) + length - 1);
+  435   2          dat <<= (8 - length);
+  436   2          dat >>= (7 - bitStart);
+  437   2          b &= mask;
+  438   2          b |= dat;
+  439   2          return IICwriteByte(dev, reg, b);
+  440   2        } else {
+  441   2          return 0;
+  442   2        }
+  443   1      }
+  444          
+  445          /**************************实现函数********************************************
+  446          *函数原型:    unsigned char IICwriteBit(unsigned char dev, unsigned char reg, unsigned char bitNum, unsigne
+             -d char dat)
+  447          *功　　能:      读 修改 写 指定设备 指定寄存器一个字节 中的1个位
+C251 COMPILER V5.60.0,  LQ_SOFTI2C                                                         21/12/21  22:07:38  PAGE 8   
+
+  448          输入  dev  目标设备地址
+  449          reg    寄存器地址
+  450          bitNum  要修改目标字节的bitNum位
+  451          dat  为0 时，目标位将被清0 否则将被置位
+  452          返回   成功 为1 
+  453          失败为0
+  454          *******************************************************************************/ 
+  455          unsigned char IICwriteBit(unsigned char dev, unsigned char reg, unsigned char bitNum, unsigned char dat)
+  456          {
+  457   1        unsigned char b;
+  458   1        IICreadByte(dev, reg, &b);
+  459   1        b = (dat != 0) ? (b | (1 << bitNum)) : (b & ~(1 << bitNum));
+  460   1        return IICwriteByte(dev, reg, b);
+  461   1      }
+  462          
+  463          //------------------End of File----------------------------
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =      1191     ------
+  ecode size           =    ------     ------
+  data size            =    ------          6
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------         16
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

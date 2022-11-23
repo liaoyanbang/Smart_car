@@ -1,0 +1,165 @@
+C251 COMPILER V5.60.0,  pid                                                                15/07/22  21:20:11  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE pid
+OBJECT MODULE PLACED IN .\Out_File\pid.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\USER\src\pid.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\..\Lib
+                    -raries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\src;
+                    -.\Out_File) DEBUG PRINT(.\Out_File\pid.lst) TABS(2) OBJECT(.\Out_File\pid.obj) 
+
+stmt  level    source
+
+    1          #include "pid.h"
+    2          
+    3          float Velocity_KP_L = 80.0,Velocity_KI_L = 5.4 ,Velocity_KD_L = 46;
+    4          
+    5          float Velocity_KP_R = 60.0,Velocity_KI_R = 5.0 ,Velocity_KD_R = 20;
+    6          //float Velocity_KP_L = 16,Velocity_KI_L = 3.6 ,Velocity_KD_L = 0;
+    7          
+    8          //float Velocity_KP_R = 12.2,Velocity_KI_R = 4.3 ,Velocity_KD_R = 0;
+    9          
+   10          //float Velocity_KP_L = 6.0,Velocity_KI_L = 2.5 ,Velocity_KD_L = 0;
+   11          
+   12          //float Velocity_KP_R = 8.3,Velocity_KI_R = 2.2 ,Velocity_KD_R = 0;
+   13          
+   14          
+   15            
+   16          int16 duojikp_normal_sqrt = 0;
+   17          int16 duojikd_normal_sqrt = 0;
+   18            
+   19          int16 duojikp_fork = 0;
+   20          int16 duojikd_fork = 0;
+   21          
+   22          int16 duojikp_round = 0;//123
+   23          int16 duojikd_round = 0;
+   24          
+   25          
+   26          
+   27          int abs_int(int p)
+   28          {
+   29   1        if(p>=0) return p;
+   30   1        else return -p;
+   31   1      }
+   32          float abs_float(float p)
+   33          {
+   34   1        if(p>=0.0) return p;
+   35   1        else return -p;
+   36   1      }
+   37          
+   38          int Incremental_PI_L (int16 Encoder,int16 Target)
+   39          {   
+   40   1         static int16 Bias=0,Last_bias=0,Last_last_bias=0;
+   41   1         static int16 Pwm = 0;
+   42   1         Bias = Target-Encoder; //Calculate the deviation //计算偏差
+   43   1      //   if(Bias>=80)
+   44   1      //   {
+   45   1      //     Pwm = 7200;
+   46   1      //   }
+   47   1      //   else
+   48   1      //   {
+   49   1           Pwm += Velocity_KP_L * (Bias-Last_bias) + Velocity_KI_L* Bias + Velocity_KD_L*(Bias-2* Last_bias + Las
+             -t_last_bias); 
+   50   1           if(Pwm>7200)Pwm= 7200;
+   51   1           if(Pwm<-7200)Pwm= -7200;
+   52   1      //   }
+   53   1         Last_last_bias= Last_bias;
+   54   1         Last_bias=Bias; //Save the last deviation //保存上一次偏差
+   55   1         return Pwm;    
+   56   1      }
+C251 COMPILER V5.60.0,  pid                                                                15/07/22  21:20:11  PAGE 2   
+
+   57          int Incremental_PI_R (int16 Encoder,int16 Target)
+   58          {  
+   59   1         static int16 Bias=0,Last_bias=0,Last_last_bias=0;
+   60   1         static int16 Pwm = 0;
+   61   1         Bias = Target-Encoder; //Calculate the deviation //计算偏差
+   62   1      //   if(Bias>=80)
+   63   1      //   {
+   64   1      //     Pwm = 7200;
+   65   1      //   }
+   66   1      //   else
+   67   1      //   {
+   68   1           Pwm += Velocity_KP_L * (Bias-Last_bias) + Velocity_KI_L* Bias + Velocity_KD_L*(Bias-2* Last_bias + Las
+             -t_last_bias); 
+   69   1           if(Pwm>7200)Pwm= 7200;
+   70   1           if(Pwm<-7200)Pwm= -7200;
+   71   1      //   }
+   72   1         Last_last_bias= Last_bias;
+   73   1         Last_bias=Bias; //Save the last deviation //保存上一次偏差 
+   74   1         return Pwm;
+   75   1      }
+   76          
+   77          int16 pid_duoji_normal_sqrt(float dig)//差比和  dig 0~1
+   78          {
+   79   1        static float error = 0;
+   80   1        static float last_error = 0;
+   81   1        static int16 servoDuty = 0;
+   82   1        error = dig;
+   83   1        //duojikp_normal_sqrt = Fuzzy_sp(&dig4,&error_dig4);//Fuzzy_Update(&Duoji_P,dig4,error_dig4);
+   84   1        servoDuty = duojikp_normal_sqrt * error + duojikd_normal_sqrt * (error-last_error);
+   85   1        last_error = error;
+   86   1        return servoDuty;
+   87   1      }
+   88          
+   89          
+   90          int16 pid_duoji_fork(float dig)//差比和  dig 0~1
+   91          {
+   92   1        static float error = 0;
+   93   1        static float last_error = 0;
+   94   1        static int16 servoDuty = 0;
+   95   1        error = dig;
+   96   1        //duojikp_fork += Fuzzy_Update(&Duoji_P,dig4,error_dig4);
+   97   1        servoDuty =  duojikp_fork* error  +duojikd_fork* (error-last_error);
+   98   1        last_error = error;
+   99   1        return servoDuty;
+  100   1      }
+  101          
+  102          
+  103          int16 pid_duoji_round(float dig)//差比和  dig 0~1
+  104          {
+  105   1        static float error = 0;
+  106   1        static float last_error = 0;
+  107   1        static int16 servoDuty = 0;
+  108   1        error = dig;
+  109   1        //duojikp = Fuzzy_Update(&Duoji_P,error,last_error-error);
+  110   1        servoDuty =  duojikp_round* error  +duojikd_round*(error-last_error);
+  111   1        last_error = error;
+  112   1        return servoDuty;
+  113   1      }
+  114          int16 pid_duoji_cross(float dig)//差比和  dig 0~1
+  115          {
+  116   1        static float error = 0;
+  117   1        static float last_error = 0;
+  118   1        static int16 servoDuty = 0;
+  119   1        error = dig;
+  120   1        //duojikp = Fuzzy_Update(&Duoji_P,error,last_error-error);
+  121   1        servoDuty =  200* error  +200*(error-last_error);
+C251 COMPILER V5.60.0,  pid                                                                15/07/22  21:20:11  PAGE 3   
+
+  122   1        last_error = error;
+  123   1        return servoDuty;
+  124   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       589     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        92     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =       220     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

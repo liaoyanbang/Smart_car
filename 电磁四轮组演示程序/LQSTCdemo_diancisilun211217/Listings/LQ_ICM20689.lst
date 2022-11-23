@@ -1,0 +1,512 @@
+C251 COMPILER V5.60.0,  LQ_ICM20689                                                        21/12/21  22:07:38  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE LQ_ICM20689
+OBJECT MODULE PLACED IN .\Objects\LQ_ICM20689.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE user\LQ_ICM20689.c LARGE INTR2 BROWSE INCDIR(.\user;.\user\Dianci) DEB
+                    -UG PRINT(.\Listings\LQ_ICM20689.lst) TABS(2) OBJECT(.\Objects\LQ_ICM20689.obj) 
+
+stmt  level    source
+
+    1          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+    2          【平    台】北京龙邱智能科技STC16核心板
+    3          【编    写】chiusir
+    4          【E-mail  】chiusir@163.com
+    5          【软件版本】V1.1 版权所有，单位使用请先联系授权
+    6          【最后更新】2021年1月23日
+    7          【相关信息参考下列地址】
+    8          【网    站】http://www.lqist.cn
+    9          【淘宝店铺】http://longqiu.taobao.com
+   10          ------------------------------------------------
+   11          【IDE】STC16
+   12          【Target 】 C251Keil5.6及以上
+   13          【SYS PLL】 30MHz使用内部晶振
+   14          =================================================================
+   15          STC16相关配套视频：
+   16          龙邱科技B站网址：https://space.bilibili.com/95313236
+   17          STC16环境下载参考视频： https://www.bilibili.com/video/BV1gy4y1p7T1/
+   18          STC16一体板子介绍视频： https://www.bilibili.com/video/BV1Jy4y1e7R4/
+   19          =================================================================
+   20          下载时, 选择时钟 30MHZ (用户可自行修改频率).
+   21          STC16F初次下载:先用IRCBND=0，ISP界面设置为24M，
+   22          然后IRCBND=0，下载频率为30M；
+   23          或者IRCBND=1，下载频率为30M；好用为准
+   24          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   25          #include "include.h"
+   26          
+   27          #define USE_SOFT_SPI //使用模拟SPI,否则使用硬件SPI
+   28          #define PI 3.1415926
+   29          
+   30          float temp_p=0;
+   31          
+   32          //                  单片机    龙邱20689模块
+   33          #define SPI_SCK      P25      //SCK
+   34          #define SPI_MISO     P23      //单片机MISO接模块--SDO
+   35          #define SPI_MOSI     P24      //单片机MOSI接模块--SDI
+   36          #define SPI_CS       P22      //CS
+   37          
+   38          #define SPI_SCK_OUT       P25
+   39          #define SPI_MISO_IN       P23
+   40          #define SPI_MOSI_OUT      P24
+   41          #define SPI_CS_OUT        P22
+   42          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   43          【作  者】chiusir
+   44          【功能说明】读取 ICM20689 的原始数据
+   45          【软件版本】V1.0
+   46          【最后更新】2020年12月21日 
+   47          【函数名】
+   48          【返回值】无 0：初始化成功   1：失败
+   49          【参数值】无 
+   50          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   51          
+   52          void Test_ICM20689(void)
+   53          {
+   54   1        char  txt[16];
+   55   1        short data aacx,aacy,aacz;          //加速度传感器原始数据
+   56   1        short data gyrox,gyroy,gyroz;        //陀螺仪原始数据 
+   57   1        
+   58   1        OLED_CLS();                   //LCD清屏
+C251 COMPILER V5.60.0,  LQ_ICM20689                                                        21/12/21  22:07:38  PAGE 2   
+
+   59   1        OLED_P6x8Str(1,0,"LQ20689M Test"); 
+   60   1        delayms(100);
+   61   1        if(ICM20689_Init())
+   62   1        {     
+   63   2          OLED_P6x8Str(1,2,"LQ20689M Fail");
+   64   2          while(1);
+   65   2        }
+   66   1        
+   67   1        while(1)
+   68   1        {
+   69   2          //测试原始数值
+   70   2          ICM_Get_Raw_data(&aacx,&aacy,&aacz,&gyrox,&gyroy,&gyroz); //得到加速度传感器数据  
+   71   2          ANO_DT_send_int16(aacx,aacy,aacz,gyrox,gyroy,gyroz,0,0);//发送数据到匿名地面站上位机
+   72   2          
+   73   2          sprintf((char*)txt,"angle:%f",atan2((float)aacz,(float)aacx)*180.0/PI); //反正切加速度计得到角度值
+   74   2          OLED_P6x8Str(0,2,(u8*)txt);
+   75   2      
+   76   2          /*
+   77   2          Kalman_Filter((float)aacz,(float)(0-gyroy)); //卡尔曼
+   78   2          sprintf((char*)txt,"g_angle:%f",Angle); 
+   79   2          OLED_P6x8Str(0,2,(u8*)txt);
+   80   2          sprintf((char*)txt,"Ang_Y:%f",angle_dot);//X轴加速度值                      
+   81   2          OLED_P6x8Str(0,3,(u8*)txt);
+   82   2          */
+   83   2          /*
+   84   2          sprintf((char*)txt,"ax:%06d",aacx);  //X轴加速度值                      
+   85   2          OLED_P6x8Str(0,2,(u8*)txt);
+   86   2          sprintf((char*)txt,"ay:%06d",aacy);  //Y轴加速度值
+   87   2          OLED_P6x8Str(0,3,(u8*)txt);
+   88   2          sprintf((char*)txt,"az:%06d",aacz);  //Z轴加速度值
+   89   2          OLED_P6x8Str(0,4,(u8*)txt);
+   90   2          sprintf((char*)txt,"gx:%06d",gyrox); //X轴角度值
+   91   2          OLED_P6x8Str(0,5,(u8*)txt);
+   92   2          sprintf((char*)txt,"gy:%06d",gyroy); //Y轴角度值
+   93   2          OLED_P6x8Str(0,6,(u8*)txt);
+   94   2          sprintf((char*)txt,"gz:%06d",gyroz); //Z轴角度值
+   95   2          OLED_P6x8Str(0,7,(u8*)txt);
+   96   2          */
+   97   2          /*
+   98   2          //测试简单融合结果
+   99   2          g_angle = ICM20689_ACC_angle_X_Z();
+  100   2          ICM20689_GYRO_Y_Ang();
+  101   2          ICM20689_GYRO_ACCEL_Ang_Y();
+  102   2          sprintf((char*)txt,"g_angle:%f",g_angle); 
+  103   2          OLED_P6x8Str(0,2,(u8*)txt);
+  104   2          sprintf((char*)txt,"Ang_Y:%f",GYRO_Ang_Y);//X轴加速度值                     
+  105   2          OLED_P6x8Str(0,3,(u8*)txt);
+  106   2          */
+  107   2          delayms(100);    
+  108   2          LED_Ctrl(LEDALL, RVS); 
+  109   2        }  
+  110   1      }
+  111          
+  112          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+  113          【作  者】chiusir
+  114          【功能说明】初始化 ICM20689
+  115          【软件版本】V1.0
+  116          【最后更新】2020年12月21日 
+  117          【函数名】
+  118          【返回值】无 0：初始化成功   1：失败
+  119          【参数值】无 
+  120          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+  121          u8 ICM20689_Init(void)
+  122          {
+  123   1        char  txt[10];
+  124   1        u8 res;
+C251 COMPILER V5.60.0,  LQ_ICM20689                                                        21/12/21  22:07:38  PAGE 3   
+
+  125   1        
+  126   1        SPI_SoftInit(); 
+  127   1        delayms(100);  
+  128   1        res=ICM_Read_Byte(WHO_AM_I);                        //读取ICM20689的ID  
+  129   1        sprintf(txt,"ID:0x%02X",res);
+  130   1        OLED_P6x8Str(1,1,txt); 
+  131   1      
+  132   1        if(res!=ICM20689_ID)                                 //器件ID正确
+  133   1        {    
+  134   2          //printf("ID=%#X\r\n",res);
+  135   2          //OLED_P6x8Str(1,4,"ID is fail!");
+  136   2          return 1;
+  137   2        }
+  138   1        else  
+  139   1        {
+  140   2          //printf("ICM20689 is OK!\n");  
+  141   2        }    
+  142   1        
+  143   1        ICM_Write_Byte(ICM_PWR_MGMT1_REG,0X80);//复位
+  144   1        delayms(100);  //延时100ms
+  145   1        ICM_Write_Byte(ICM_PWR_MGMT1_REG,0X00);//唤醒
+  146   1        delayms(100);  //延时100ms
+  147   1        
+  148   1        ICM_Set_Gyro_Fsr(3);       //陀螺仪传感器,±2000dps   
+  149   1        ICM_Set_Accel_Fsr(1);      //加速度传感器,0:±2g   1:±4g    2:±8g
+  150   1        ICM_Set_Rate(1000);        //设置采样率1000Hz
+  151   1        //ICM_Write_Byte(ICM_CFG_REG,0x02);    //设置数字低通滤波器   98hz
+  152   1        ICM_Write_Byte(ICM_CFG_REG,4);         //低通滤波频率，典型值：0x07(3600Hz)此寄存器内决定Internal_Sample
+             -_Rate==8K
+  153   1        ICM_Write_Byte(ICM_INT_EN_REG,0X00);   //关闭所有中断
+  154   1        ICM_Write_Byte(ICM_FIFO_EN_REG,0X00);  //关闭FIFO
+  155   1        ICM_Write_Byte(ICM_USER_CTRL_REG,0X00);//I2C主模式关闭
+  156   1        ICM_Write_Byte(ICM_PWR_MGMT1_REG,0X01);//设置CLKSEL,PLL X轴为参考
+  157   1        ICM_Write_Byte(ICM_PWR_MGMT2_REG,0X00);//加速度与陀螺仪都工作 
+  158   1        
+  159   1        return 0;
+  160   1      }
+  161          
+  162          /*************************************************************************
+  163          *  函数名称：void SPI_SoftInit(void)
+  164          *  功能说明：模拟SPI口初始化
+  165          *  参数说明：无
+  166          *  函数返回：无
+  167          *  修改时间：2020年8月10日
+  168          *  备    注：   
+  169          *************************************************************************/
+  170          void SPI_SoftInit(void)
+  171          {
+  172   1        #ifdef USE_SPI
+                     SPI_init();
+                 #elif defined USE_SOFT_SPI
+  175   1            P2M1 = 0; P2M0 = 0;  //设置为准双向口
+  176   1            P2PU =0x3C;          //上拉
+  177   1        #endif
+  178   1      }
+  179          /*************************************************************************
+  180          *  函数名称：void SPI_SoftReadWriteNbyte(u8 *lqbuff, u16 len)
+  181          *  功能说明：SPI读写数据及长度
+  182          *  参数说明：u8 *buf数据指针,u16 len长度
+  183          *  函数返回：
+  184          *  修改时间：2020年8月10日
+  185          *  备    注：   
+  186          *************************************************************************/
+  187          void SPI_SoftReadWriteNbyte(u8 *lqbuff, u16 len)
+  188          {
+  189   1        u8 i;
+C251 COMPILER V5.60.0,  LQ_ICM20689                                                        21/12/21  22:07:38  PAGE 4   
+
+  190   1        
+  191   1        SPI_CS_OUT = 0;
+  192   1        SPI_SCK_OUT= 1;
+  193   1        do
+  194   1        {
+  195   2          for(i = 0; i < 8; i++)
+  196   2          {
+  197   3            SPI_MOSI_OUT = ((*lqbuff) >= 0x80);
+  198   3            SPI_SCK_OUT= 0;
+  199   3            (*lqbuff) = (*lqbuff)<<1;      
+  200   3            
+  201   3            SPI_SCK_OUT= 1;
+  202   3            
+  203   3            (*lqbuff) |= SPI_MISO_IN;          
+  204   3          }
+  205   2          lqbuff++;
+  206   2        }while(--len);
+  207   1        SPI_CS_OUT = 1;
+  208   1      }
+  209          /*************************************************************************
+  210          *  函数名称：void ICM_Read_Len(u8 reg,u8 len,u8 *buf)
+  211          *  功能说明：u8 reg起始寄存器,u8 *buf数据指针,u16 len长度
+  212          *  参数说明：无
+  213          *  函数返回：无
+  214          *  修改时间：2020年8月10日
+  215          *  备    注：   
+  216          *************************************************************************/
+  217          void ICM_Read_Len(u8 reg,u8 len,u8 *buf)
+  218          {  
+  219   1      #ifdef USE_SOFT_SPI
+  220   1        buf[0] = reg | 0x80;  
+  221   1        SPI_SoftReadWriteNbyte(buf, len + 1);  
+  222   1      #else
+                 SPI_Read_Nbytes(reg|0x80, buf, len);
+               #endif
+  225   1      }
+  226          /*************************************************************************
+  227          *  函数名称：void ICM_Get_Gyroscope(short *gx,short *gy,short *gz)
+  228          *  功能说明：
+  229          *  参数说明：无
+  230          *  函数返回：无
+  231          *  修改时间：2020年8月10日
+  232          *  备    注：   
+  233          *************************************************************************/
+  234          void ICM_Get_Gyroscope(short *gx,short *gy,short *gz)
+  235          {
+  236   1        u8 buf[7]; 
+  237   1        ICM_Read_Len(ICM_GYRO_XOUTH_REG,6,buf);
+  238   1        
+  239   1        *gx=((u16)buf[1]<<8)|buf[2];  
+  240   1        *gy=((u16)buf[3]<<8)|buf[4];  
+  241   1        *gz=((u16)buf[5]<<8)|buf[6];
+  242   1        
+  243   1      }
+  244          /*************************************************************************
+  245          *  函数名称：void ICM_Get_Accelerometer(short *ax,short *ay,short *az)
+  246          *  功能说明：
+  247          *  参数说明：无
+  248          *  函数返回：无
+  249          *  修改时间：2020年8月10日
+  250          *  备    注：   
+  251          *************************************************************************/
+  252          void ICM_Get_Accelerometer(short *ax,short *ay,short *az)
+  253          {
+  254   1        u8 buf[7];  
+  255   1        ICM_Read_Len(ICM_ACCEL_XOUTH_REG,6,buf);
+C251 COMPILER V5.60.0,  LQ_ICM20689                                                        21/12/21  22:07:38  PAGE 5   
+
+  256   1        
+  257   1        *ax=((u16)buf[1]<<8)|buf[2];  
+  258   1        *ay=((u16)buf[3]<<8)|buf[4];  
+  259   1        *az=((u16)buf[5]<<8)|buf[6];  
+  260   1      }
+  261          
+  262          /*************************************************************************
+  263          *  函数名称：void ICM_Get_Raw_data(short *ax,short *ay,short *az,short *gx,short *gy,short *gz)
+  264          *  功能说明：读取加速度陀螺仪数据
+  265          *  参数说明：六轴
+  266          *  函数返回：无
+  267          *  修改时间：2020年8月10日
+  268          *  备    注：   
+  269          *************************************************************************/
+  270          void ICM_Get_Raw_data(short *ax,short *ay,short *az,short *gx,short *gy,short *gz)
+  271          {
+  272   1        u8 buf[16];  
+  273   1        ICM_Read_Len(ICM_ACCEL_XOUTH_REG,14,buf);
+  274   1        
+  275   1        *ax=((u16)buf[1]<<8)|buf[2];  
+  276   1        *ay=((u16)buf[3]<<8)|buf[4];  
+  277   1        *az=((u16)buf[5]<<8)|buf[6];
+  278   1        *gx=((u16)buf[9]<<8)|buf[10];  
+  279   1        *gy=((u16)buf[11]<<8)|buf[12];  
+  280   1        *gz=((u16)buf[13]<<8)|buf[14];
+  281   1      }
+  282          
+  283          /*************************************************************************
+  284          *  函数名称：void ICM_Write_Byte(u8 reg,u8 value)
+  285          *  功能说明：向寄存器写数据
+  286          *  参数说明：u8 reg寄存器,u8 value数据
+  287          *  函数返回：无
+  288          *  修改时间：2020年8月10日
+  289          *  备    注：   
+  290          *************************************************************************/
+  291          void ICM_Write_Byte(u8 reg,u8 value)
+  292          {
+  293   1      #ifdef USE_SOFT_SPI
+  294   1        uint8_t buff[2];  
+  295   1        buff[0] = reg;                  //先发送寄存器
+  296   1        buff[1] = value;                //再发送数据  
+  297   1        SPI_SoftReadWriteNbyte(buff, 2);//发送buff里数据，并采集到 buff里  
+  298   1        
+  299   1      #else
+                 SPI_CS=0;
+                 SPI_WriteByte(reg|0x80);
+                 SPI_WriteByte(value);
+                 SPI_CS=1;
+               #endif
+  305   1      }
+  306          
+  307          /*************************************************************************
+  308          *  函数名称：void ICM_Write_Byte(u8 reg,u8 value)
+  309          *  功能说明：向寄存器写数据
+  310          *  参数说明：u8 reg寄存器,
+  311          *  函数返回：u8 value数据
+  312          *  修改时间：2020年8月10日
+  313          *  备    注：   
+  314          *************************************************************************/
+  315          u8 ICM_Read_Byte(u8 reg)
+  316          {  
+  317   1        u8 buff[2];
+  318   1      #ifdef USE_SOFT_SPI
+  319   1        buff[0] = reg | 0x80;    //先发送寄存器  
+  320   1        SPI_SoftReadWriteNbyte(buff, 2);   
+  321   1        return buff[1];
+C251 COMPILER V5.60.0,  LQ_ICM20689                                                        21/12/21  22:07:38  PAGE 6   
+
+  322   1      #else
+                 SPI_CS=0;
+                 SPI_WriteByte(reg| 0x80);  
+                 buff[0]=SPI_ReadByte();
+                 SPI_CS=1;
+                 return buff[0];
+               #endif  
+  329   1      
+  330   1      }
+  331          /*************************************************************************
+  332          *  函数名称：void ICM_Set_Gyro_Fsr(u8 fsr)
+  333          *  功能说明：设置陀螺仪传感器满量程范围
+  334          *  参数说明：Fsr:0,±250dps;1,±500dps;2,±1000dps;3,±2000dps
+  335          *  函数返回：
+  336          *  修改时间：2020年8月10日
+  337          *  备    注：   
+  338          *************************************************************************/
+  339          void ICM_Set_Gyro_Fsr(u8 fsr)
+  340          {
+  341   1        ICM_Write_Byte(ICM_GYRO_CFG_REG,fsr<<3);//设置陀螺仪满量程范围  
+  342   1      }
+  343          /*************************************************************************
+  344          *  函数名称：void ICM_Set_Accel_Fsr(u8 fsr)
+  345          *  功能说明：设置LQ20689陀螺仪传感器满量程范围
+  346          *  参数说明：fsr:0,±2g;1,±4g;2,±8g;3,±16g
+  347          *  函数返回：
+  348          *  修改时间：2020年8月10日
+  349          *  备    注：   
+  350          *************************************************************************/
+  351          void ICM_Set_Accel_Fsr(u8 fsr)
+  352          {
+  353   1        ICM_Write_Byte(ICM_ACCEL_CFG_REG,fsr<<3);//设置加速度传感器满量程范围  
+  354   1      }
+  355          /*************************************************************************
+  356          *  函数名称：void ICM_Set_LPF(u16 lpf)
+  357          *  功能说明：设置LQ20689数字低通滤波器
+  358          *  参数说明：lpf:数字低通滤波频率(Hz)
+  359          *  函数返回：
+  360          *  修改时间：2020年8月10日
+  361          *  备    注：   
+  362          *************************************************************************/
+  363          void ICM_Set_LPF(u16 lpf)
+  364          {
+  365   1        u8 dat=0;
+  366   1        if(lpf>=188)dat=1;
+  367   1        else if(lpf>=98)dat=2;
+  368   1        else if(lpf>=42)dat=3;
+  369   1        else if(lpf>=20)dat=4;
+  370   1        else if(lpf>=10)dat=5;
+  371   1        else dat=6; 
+  372   1        ICM_Write_Byte(ICM_CFG_REG,dat);//设置数字低通滤波器  
+  373   1      }
+  374          /*************************************************************************
+  375          *  函数名称：void ICM_Set_Rate(u16 rate)
+  376          *  功能说明：设置LQ20689陀螺仪传感器满量程范围
+  377          *  参数说明：rate:4~1000(Hz)
+  378          *  函数返回：
+  379          *  修改时间：2020年8月10日
+  380          *  备    注：   
+  381          *************************************************************************/
+  382          void ICM_Set_Rate(u16 rate)
+  383          {
+  384   1        u8 dat;
+  385   1        if(rate>1000)rate=1000;
+  386   1        if(rate<4)rate=4;
+  387   1        dat=1000/rate-1;
+C251 COMPILER V5.60.0,  LQ_ICM20689                                                        21/12/21  22:07:38  PAGE 7   
+
+  388   1        ICM_Write_Byte(ICM_SAMPLE_RATE_REG,dat);  //设置数字低通滤波器
+  389   1        ICM_Set_LPF(rate/2);  //自动设置LPF为采样率的一半
+  390   1      }
+  391          /*************************************************************************
+  392          *  函数名称：u16 ICM_Get_Temperature(void)
+  393          *  功能说明：得到温度值
+  394          *  参数说明：
+  395          *  函数返回：返回值:温度值(扩大了100倍)
+  396          *  修改时间：2020年8月10日
+  397          *  备    注：返回值:温度值(扩大了100倍)   
+  398          *************************************************************************/
+  399          u16 ICM_Get_Temperature(void)
+  400          {
+  401   1        u8 buf[3]; 
+  402   1        u16 raw;
+  403   1        float temp;
+  404   1        ICM_Read_Len(ICM_TEMP_OUTH_REG,2,buf); 
+  405   1        raw=((u16)buf[0]<<8)|buf[1];  
+  406   1        temp=21+((double)raw)/333.87;  
+  407   1        return (u16)temp*100;
+  408   1      }
+  409          
+  410          
+  411          //*******************************************************************************************************
+             -***************************************************
+  412          void icm20689_reset()
+  413          {
+  414   1        ICM_Write_Byte(ICM_PWR_MGMT1_REG,0X80);   //复位
+  415   1        delayms(100);
+  416   1        ICM_Write_Byte(ICM_PWR_MGMT1_REG, 0x00);  //解除休眠状态
+  417   1      }
+  418          
+  419          //***************反正切Y轴角度*************************//
+  420          /*
+  421           * 函数名：ICM20689_ACC_angle_X_Z
+  422           * 描述  ：加速度计反正切角度
+  423           * 输入  ：无
+  424           * 输出  ：角度值
+  425           * 调用  ：内部调用
+  426           */
+  427          /*
+  428          float ICM20689_ACC_angle_X_Z(void)                       
+  429          {
+  430            short a_x,a_y,a_z;
+  431            ICM_Get_Accelerometer((short)&a_x,(short)&a_y,(short)&a_z);
+  432            return (atan2((float)a_z,(float)a_x)*(180.0/PI));   //反正切加速度计得到角度值
+  433          }
+  434          */
+  435          //**************积分Y轴角度*************************//
+  436          /*
+  437           * 函数名：ICM20689_GYRO_Y_Ang(void)
+  438           * 描述  ：积分Y轴角度
+  439           * 输入  ：无
+  440           * 输出  ：无
+  441           * 调用  ：内部调用
+  442           */
+  443           /*
+  444          void ICM20689_GYRO_Y_Ang(void)
+  445          {
+  446            short g_x,g_y,g_z;
+  447            ICM_Get_Gyroscope((u16)&g_x,(u16)&g_y,&g_z);   //获取Y轴陀螺仪值
+  448            GYRO_Speed_Y= ((float)g_y)*0.00032;
+  449            GYRO_Ang_Y+=GYRO_Speed_Y;  //积分角度
+  450          }
+  451          */
+  452          //***************加速度计和陀螺仪数据融合*****************************//
+C251 COMPILER V5.60.0,  LQ_ICM20689                                                        21/12/21  22:07:38  PAGE 8   
+
+  453          /*
+  454          void ICM20689_GYRO_ACCEL_Ang_Y(void)
+  455          { 
+  456            ICM20689_GYRO_Y_Ang();
+  457            ACCEL_Ang_Y=ICM20689_ACC_angle_X_Z();
+  458            temp_p=(ACCEL_Ang_Y-GYRO_Ang_Y)*0.025;//融合系数  //0.025
+  459            GYRO_Ang_Y=GYRO_Ang_Y+temp_p;  
+  460            ACC_GYRO_Ang_Y=GYRO_Ang_Y;
+  461          }
+  462          */
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =      1261     ------
+  ecode size           =    ------     ------
+  data size            =    ------          4
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =         4        107
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        56     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

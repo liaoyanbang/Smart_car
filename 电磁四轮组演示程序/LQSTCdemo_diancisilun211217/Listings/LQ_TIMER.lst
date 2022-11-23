@@ -1,0 +1,312 @@
+C251 COMPILER V5.60.0,  LQ_TIMER                                                           21/12/21  22:07:37  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE LQ_TIMER
+OBJECT MODULE PLACED IN .\Objects\LQ_TIMER.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE user\LQ_TIMER.c LARGE INTR2 BROWSE INCDIR(.\user;.\user\Dianci) DEBUG 
+                    -PRINT(.\Listings\LQ_TIMER.lst) TABS(2) OBJECT(.\Objects\LQ_TIMER.obj) 
+
+stmt  level    source
+
+    1          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+    2          【平    台】北京龙邱智能科技STC16核心板
+    3          【修    改】chiusir
+    4          【E-mail  】chiusir@163.com
+    5          【软件版本】V1.1 版权所有，单位使用请先联系授权
+    6          【最后更新】2021年1月23日
+    7          【相关信息参考下列地址】
+    8          【网    站】http://www.lqist.cn
+    9          【淘宝店铺】http://longqiu.taobao.com
+   10          ------------------------------------------------
+   11          【IDE】STC16
+   12          【Target 】 C251Keil5.6及以上
+   13          【SYS PLL】 30MHz使用内部晶振
+   14          =================================================================
+   15          STC16相关配套视频：
+   16          龙邱科技B站网址：https://space.bilibili.com/95313236
+   17          STC16环境下载参考视频： https://www.bilibili.com/video/BV1gy4y1p7T1/
+   18          STC16一体板子介绍视频： https://www.bilibili.com/video/BV1Jy4y1e7R4/
+   19          =================================================================
+   20          下载时, 选择时钟 30MHZ (用户可自行修改频率).
+   21          STC16F初次下载:先用IRCBND=0，ISP界面设置为24M，
+   22          然后IRCBND=0，下载频率为30M；
+   23          或者IRCBND=1，下载频率为30M；好用为准
+   24          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   25          #include "include.h"
+   26          
+   27          #define Timer0_Int_Freq  200
+   28          #define Timer1_Int_Freq  200
+   29          #define Timer2_Int_Freq  100
+   30          
+   31          #define Timer0_Reload   (MAIN_Fosc /Timer0_Int_Freq)      //Timer 0 中断频率, n次/秒
+   32          #define Timer1_Reload   (MAIN_Fosc /Timer1_Int_Freq)      //Timer 1 中断频率, n次/秒
+   33          #define Timer2_Reload   (MAIN_Fosc /Timer2_Int_Freq)      //Timer 2 中断频率, n次/秒
+   34          #define Timer3_Reload   (MAIN_Fosc / 300)                 //Timer 3 中断频率, 400次/秒
+   35          #define Timer4_Reload   (MAIN_Fosc / 300)                 //Timer 4 中断频率, 500次/秒
+   36          
+   37          //========================================================================
+   38          // 函数: void timer0_int (void) interrupt TIMER0_VECTOR
+   39          // 描述: timer0中断函数.
+   40          // 参数: none.
+   41          // 返回: none.
+   42          // 版本: V1.0, 2015-1-12
+   43          //========================================================================
+   44          /*
+   45          void timer0_int (void) interrupt 1
+   46          {
+   47            LED_Ctrl(LED0, RVS); //平衡车占用
+   48          }
+   49          */
+   50          
+   51          //========================================================================
+   52          // 函数: void timer1_int (void) interrupt TIMER1_VECTOR
+   53          // 描述: timer1中断函数.
+   54          // 参数: none.
+   55          // 返回: none.
+   56          // 版本: V1.0, 2015-1-12
+   57          //========================================================================
+   58          /*void timer1_int (void) interrupt 3 
+C251 COMPILER V5.60.0,  LQ_TIMER                                                           21/12/21  22:07:37  PAGE 2   
+
+   59          {
+   60             LED_Ctrl(LED0, RVS);
+   61          }
+   62          */
+   63          //========================================================================
+   64          // 函数: void timer2_int (void) interrupt TIMER2_VECTOR
+   65          // 描述: timer2中断函数.
+   66          // 参数: none.
+   67          // 返回: none.
+   68          // 版本: V1.0, 2015-1-12
+   69          //========================================================================
+   70          void timer2_int (void) interrupt 12
+   71          {
+   72   1        //LED_Ctrl(LED0, RVS);//测试用
+   73   1      }
+   74          
+   75          void timer3_int (void) interrupt 19
+   76          {
+   77   1        LED_Ctrl(LED0, RVS);
+   78   1      }
+   79          void timer4_int (void) interrupt 20
+   80          {
+   81   1        LED_Ctrl(LED0, RVS);
+   82   1      }
+   83          
+   84          //========================================================================
+   85          // 函数: void   Timer0_init(void)
+   86          // 描述: timer0初始化函数.
+   87          // 参数: none.
+   88          // 返回: none.
+   89          // 版本: V1.0, 2015-1-12
+   90          //========================================================================
+   91          void Timer0_init(void)
+   92          {
+   93   1        TR0 = 0;    //停止计数
+   94   1        
+   95   1      #if (Timer0_Reload < 64)                // 如果用户设置值不合适， 则不启动定时器
+               #error "Timer0设置的中断过快!"
+                 
+               #elif ((Timer0_Reload/12) < 65536UL)    // 如果用户设置值不合适， 则不启动定时器
+   99   1        ET0 = 1;                              //允许中断
+  100   1        //  PT0 = 1;                          //高优先级中断
+  101   1        TMOD &= ~0x03;
+  102   1        TMOD |= 0;                            //工作模式, 0: 16位自动重装, 1: 16位定时/计数, 2: 8位自动重装, 3:
+             - 16位自动重装, 不可屏蔽中断
+  103   1        //  TMOD |=  0x04;                    //对外计数或分频
+  104   1        TMOD &= ~0x04;  //定时
+  105   1        //  INTCLKO |=  0x01;                 //输出时钟
+  106   1        INTCLKO &= ~0x01;                     //不输出时钟
+  107   1        
+  108   1      #if (Timer0_Reload < 65536UL)
+                 AUXR |=  0x80;                        //1T mode
+                 TH0 = (u8)((65536UL - Timer0_Reload) / 256);
+                 TL0 = (u8)((65536UL - Timer0_Reload) % 256);
+               #else
+  113   1        AUXR &= ~0x80;  //12T mode
+  114   1        TH0 = (u8)((65536UL - Timer0_Reload/12) / 256);
+  115   1        TL0 = (u8)((65536UL - Timer0_Reload/12) % 256);
+  116   1      #endif
+  117   1        
+  118   1        TR0 = 1;                              //开始运行
+  119   1        
+  120   1      #else
+               #error "Timer0设置的中断过慢!"
+               #endif
+  123   1      }
+C251 COMPILER V5.60.0,  LQ_TIMER                                                           21/12/21  22:07:37  PAGE 3   
+
+  124          
+  125          //========================================================================
+  126          // 函数: void   Timer1_init(void)
+  127          // 描述: timer1初始化函数.
+  128          // 参数: none.
+  129          // 返回: none.
+  130          // 版本: V1.0, 2015-1-12
+  131          //========================================================================
+  132          void    Timer1_init(void)
+  133          {
+  134   1        TR1 = 0;                               //停止计数
+  135   1        
+  136   1      #if (Timer1_Reload < 64)                 // 如果用户设置值不合适， 则不启动定时器
+               #error "Timer1设置的中断过快!"
+                 
+               #elif ((Timer1_Reload/12) < 65536UL)     // 如果用户设置值不合适， 则不启动定时器
+  140   1        ET1 = 1;                               //允许中断
+  141   1        //  PT1 = 1;                           //高优先级中断
+  142   1        TMOD &= ~0x30;
+  143   1        TMOD |= (0 << 4);                      //工作模式, 0: 16位自动重装, 1: 16位定时/计数, 2: 8位自动重装
+  144   1        //  TMOD |=  0x40;                     //对外计数或分频
+  145   1        TMOD &= ~0x40;  //定时
+  146   1        //  INTCLKO |=  0x02;                  //输出时钟
+  147   1        INTCLKO &= ~0x02;                      //不输出时钟
+  148   1        
+  149   1      #if (Timer1_Reload < 65536UL)
+                 AUXR |=  0x40;                         //1T mode
+                 TH1 = (u8)((65536UL - Timer1_Reload) / 256);
+                 TL1 = (u8)((65536UL - Timer1_Reload) % 256);
+               #else
+  154   1        AUXR &= ~0x40;                         //12T mode
+  155   1        TH1 = (u8)((65536UL - Timer1_Reload/12) / 256);
+  156   1        TL1 = (u8)((65536UL - Timer1_Reload/12) % 256);
+  157   1      #endif
+  158   1        
+  159   1        TR1 = 1;                               //开始运行
+  160   1        
+  161   1      #else
+               #error "Timer1设置的中断过慢!"
+               #endif
+  164   1      }
+  165          
+  166          //========================================================================
+  167          // 函数: void   Timer2_init(void)
+  168          // 描述: timer2初始化函数.
+  169          // 参数: none.
+  170          // 返回: none.
+  171          // 版本: V1.0, 2015-1-12
+  172          //========================================================================
+  173          void    Timer2_init(void)
+  174          {
+  175   1        AUXR &= ~0x1c;                         //停止计数, 定时模式, 12T模式
+  176   1         
+  177   1      #if (Timer2_Reload < 64)                 // 如果用户设置值不合适， 则不启动定时器
+               #error "Timer2设置的中断过快!"
+                 
+               #elif ((Timer2_Reload/12) < 65536UL)     // 如果用户设置值不合适， 则不启动定时器
+  181   1        ET2 = 1;                                //允许中断
+  182   1        //  INTCLKO |=  0x04;                  //输出时钟
+  183   1        INTCLKO &= ~0x04;                      //不输出时钟
+  184   1        
+  185   1      #if (Timer2_Reload < 65536UL)
+                 AUXR |=  (1<<2);                       //1T mode
+                 T2H = (u8)((65536UL - Timer2_Reload) / 256);
+                 T2L = (u8)((65536UL - Timer2_Reload) % 256);
+               #else
+C251 COMPILER V5.60.0,  LQ_TIMER                                                           21/12/21  22:07:37  PAGE 4   
+
+  190   1        T2H = (u8)((65536UL - Timer2_Reload/12) / 256);
+  191   1        T2L = (u8)((65536UL - Timer2_Reload/12) % 256);
+  192   1      #endif
+  193   1        
+  194   1        AUXR |=  (1<<4);                       //开始运行
+  195   1        
+  196   1      #else
+               #error "Timer2设置的中断过慢!"
+               #endif
+  199   1      }
+  200          
+  201          //========================================================================
+  202          // 函数: void   Timer3_init(void)
+  203          // 描述: timer3初始化函数.
+  204          // 参数: none.
+  205          // 返回: none.
+  206          // 版本: V1.0, 2015-1-12
+  207          //========================================================================
+  208          void    Timer3_init(void)
+  209          {
+  210   1        T4T3M &= ~0x0f;                         //停止计数, 定时模式, 12T模式, 不输出时钟
+  211   1        
+  212   1      #if (Timer3_Reload < 64)                  // 如果用户设置值不合适， 则不启动定时器
+               #error "Timer3设置的中断过快!"
+                 
+               #elif ((Timer3_Reload/12) < 65536UL)      // 如果用户设置值不合适， 则不启动定时器
+  216   1        ET3 = 1;                                //允许中断
+  217   1        //  T4T3M |=  0x01;                     //输出时钟
+  218   1        //  T4T3M &= ~0x01;                     //不输出时钟
+  219   1        
+  220   1      #if (Timer3_Reload < 65536UL)
+                 T4T3M |=  (1<<1);                       //1T mode
+                 T3H = (u8)((65536UL - Timer3_Reload) / 256);
+                 T3L = (u8)((65536UL - Timer3_Reload) % 256);
+               #else
+  225   1        T3H = (u8)((65536UL - Timer3_Reload/12) / 256);
+  226   1        T3L = (u8)((65536UL - Timer3_Reload/12) % 256);
+  227   1      #endif
+  228   1        
+  229   1        T4T3M |=  (1<<3);                       //开始运行
+  230   1        
+  231   1      #else
+               #error "Timer3设置的中断过慢!"
+               #endif
+  234   1      }
+  235          
+  236          //========================================================================
+  237          // 函数: void   Timer4_init(void)
+  238          // 描述: timer4初始化函数.
+  239          // 参数: none.
+  240          // 返回: none.
+  241          // 版本: V1.0, 2015-1-12
+  242          //========================================================================
+  243          void    Timer4_init(void)
+  244          {
+  245   1        T4T3M &= ~0xf0;                         //停止计数, 定时模式, 12T模式, 不输出时钟
+  246   1        
+  247   1      #if (Timer4_Reload < 64)                  // 如果用户设置值不合适， 则不启动定时器
+               #error "Timer4设置的中断过快!"
+                 
+               #elif ((Timer4_Reload/12) < 65536UL)      // 如果用户设置值不合适， 则不启动定时器
+  251   1        ET4 = 1;    //允许中断
+  252   1        //  T4T3M |=  0x10;                     //输出时钟
+  253   1        //  T4T3M &= ~0x10;                     //不输出时钟
+  254   1        
+  255   1      #if (Timer4_Reload < 65536UL)
+C251 COMPILER V5.60.0,  LQ_TIMER                                                           21/12/21  22:07:37  PAGE 5   
+
+                 T4T3M |=  (1<<6);                       //12T mode ;P0.6计数
+                 T4H = (u8)((65536UL - Timer4_Reload) / 256);
+                 T4L = (u8)((65536UL - Timer4_Reload) % 256);
+               #else
+  260   1        T4H = (u8)((65536UL - Timer4_Reload/12) / 256);
+  261   1        T4L = (u8)((65536UL - Timer4_Reload/12) % 256);
+  262   1      #endif
+  263   1        
+  264   1        T4T3M |=  (1<<7);                       //开始运行
+  265   1        
+  266   1      #else
+               #error "Timer4设置的中断过慢!"
+               #endif
+  269   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       227     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

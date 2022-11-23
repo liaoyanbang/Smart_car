@@ -1,0 +1,304 @@
+C251 COMPILER V5.60.0,  board                                                              13/07/22  15:38:04  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE board
+OBJECT MODULE PLACED IN .\Out_File\board.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\..\Libraries\libraries\board.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE 
+                    -INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\
+                    -inc;..\USER\src;.\Out_File) DEBUG PRINT(.\Out_File\board.lst) TABS(2) OBJECT(.\Out_File\board.obj) 
+
+stmt  level    source
+
+    1          /********************************************************************************************************
+             -*************
+    2           * COPYRIGHT NOTICE
+    3           * Copyright (c) 2020,Öð·É¿Æ¼¼
+    4           * All rights reserved.
+    5           * ¼¼ÊõÌÖÂÛQQÈº£ºÒ»Èº£º179029047(ÒÑÂú)  ¶þÈº£º244861897(ÒÑÂú)  ÈýÈº£º824575535
+    6           *
+    7           * ÒÔÏÂËùÓÐÄÚÈÝ°æÈ¨¾ùÊôÖð·É¿Æ¼¼ËùÓÐ£¬Î´¾­ÔÊÐí²»µÃÓÃÓÚÉÌÒµÓÃÍ¾£¬
+    8           * »¶Ó­¸÷Î»Ê¹ÓÃ²¢´«²¥±¾³ÌÐò£¬ÐÞ¸ÄÄÚÈÝÊ±±ØÐë±£ÁôÖð·É¿Æ¼¼µÄ°æÈ¨ÉùÃ÷¡£
+    9           *
+   10           * @file          board
+   11           * @company       ³É¶¼Öð·É¿Æ¼¼ÓÐÏÞ¹«Ë¾
+   12           * @author        Öð·É¿Æ¼¼(QQ790875685)
+   13           * @version       ²é¿´docÄÚversionÎÄ¼þ °æ±¾ËµÃ÷
+   14           * @Software    MDK FOR C251 V5.60
+   15           * @Target core   STC16F40K128
+   16           * @Taobao      https://seekfree.taobao.com/
+   17           * @date          2020-4-14
+   18           ********************************************************************************************************
+             -************/
+   19           
+   20           
+   21          #include "board.h"
+   22          #include "zf_uart.h"
+   23          #include "zf_tim.h"
+   24          #include "zf_delay.h"
+   25          
+   26          //22.11MHzµÄIRC²ÎÊý¼Ä´æÆ÷ 0xFB
+   27          //24MHzµÄIRC²ÎÊý¼Ä´æÆ÷ 0xFB
+   28          #define IRC_22M (*((uint8  idata*)0xFA))
+   29          #define IRC_24M (*((uint8  idata*)0xFB))
+   30          
+   31          
+   32          //ÄÚºËÆµÂÊ
+   33          int32 sys_clk = 0;
+   34          
+   35          
+   36          void set_clk(uint32 clk)
+   37          {
+   38   1        if(33177600 == clk)
+   39   1        {
+   40   2          IRCBAND = 1;
+   41   2          LIRTRIM = 3;
+   42   2          IRTRIM = 38;
+   43   2          CLKDIV = 0;
+   44   2        }
+   45   1        else if(30000000 == clk)
+   46   1        {
+   47   2          IRCBAND = 0;
+   48   2          LIRTRIM = 3;
+   49   2          IRTRIM = 227;
+   50   2          CLKDIV = 0;
+   51   2        }
+   52   1        else if(27000000 == clk)
+   53   1        {
+   54   2          IRCBAND = 0;
+   55   2          LIRTRIM = 3;
+C251 COMPILER V5.60.0,  board                                                              13/07/22  15:38:04  PAGE 2   
+
+   56   2          IRTRIM = 171;
+   57   2          CLKDIV = 0;
+   58   2        }
+   59   1        else if(24000000 == clk)
+   60   1        {
+   61   2          IRCBAND = 0;
+   62   2          LIRTRIM = 1;
+   63   2          IRTRIM = 115;
+   64   2          CLKDIV = 0;
+   65   2        }
+   66   1        else if(22118400 == clk)
+   67   1        {
+   68   2          IRCBAND = 0;
+   69   2          LIRTRIM = 3;
+   70   2          IRTRIM = 80;
+   71   2          CLKDIV = 0;
+   72   2        }
+   73   1        else if(20000000 == clk)
+   74   1        {
+   75   2          IRCBAND = 0;
+   76   2          LIRTRIM = 1;
+   77   2          IRTRIM = 40;
+   78   2          CLKDIV = 0;
+   79   2        }
+   80   1        else if(18432000 == clk)
+   81   1        {
+   82   2          IRCBAND = 0;
+   83   2          LIRTRIM = 1;
+   84   2          IRTRIM = 12;
+   85   2          CLKDIV = 0;
+   86   2        }
+   87   1      //  else if(12000000 == clk)
+   88   1      //  {
+   89   1      //    IRCBAND = 0;
+   90   1      //    LIRTRIM = 1;
+   91   1      //    IRTRIM = 115;
+   92   1      //    CLKDIV = 1;
+   93   1      //  }
+   94   1      //  else if(11059200 == clk)
+   95   1      //  {
+   96   1      //    IRCBAND = 0;
+   97   1      //    LIRTRIM = 3;
+   98   1      //    IRTRIM = 80;
+   99   1      //    CLKDIV = 1;
+  100   1      //  } 
+  101   1      //  else if(6000000 == clk)
+  102   1      //  {
+  103   1      //    IRCBAND = 0;
+  104   1      //    LIRTRIM = 1;
+  105   1      //    IRTRIM = 115;
+  106   1      //    CLKDIV = 3;
+  107   1      //  }
+  108   1      //  else if(5529600 == clk)
+  109   1      //  {
+  110   1      //    IRCBAND = 0;
+  111   1      //    LIRTRIM = 3;
+  112   1      //    IRTRIM = 80;
+  113   1      //    CLKDIV = 3;
+  114   1      //  }
+  115   1        else  //´íÎó²ÎÊý µ÷Õûµ½ 30M
+  116   1        {
+  117   2          IRCBAND = 0;
+  118   2          LIRTRIM = 3;
+  119   2          IRTRIM = 227;
+  120   2          CLKDIV = 0;
+  121   2        }
+C251 COMPILER V5.60.0,  board                                                              13/07/22  15:38:04  PAGE 3   
+
+  122   1      }
+  123          
+  124          
+  125          //-------------------------------------------------------------------------------------------------------
+             -------------
+  126          //  @brief      »ñÈ¡ÏµÍ³ÆµÂÊ
+  127          //  @param      NULL            ¿ÕÖµ
+  128          //  @return     void          ÏµÍ³ÆµÂÊ
+  129          //  Sample usage:               
+  130          //-------------------------------------------------------------------------------------------------------
+             -------------
+  131          uint32 get_clk(void)
+  132          {
+  133   1        uint32 temp_count;
+  134   1        P_SW2 |= 0x80;
+  135   1        
+  136   1        if(IRCBAND)
+  137   1          temp_count = 36000000UL + ((int32)((int32)IRTRIM - (int32)IRC_22M) * 0x128E0UL); //ÆµÂÊµÄÆ«²î,¼ÆËã³ö´ó¸
+             -ÅÊý¾Ý
+  138   1        else
+  139   1          temp_count = 24000000UL + ((int32)((int32)IRTRIM - (int32)IRC_24M) * 0xBB80UL);  //ÆµÂÊµÄÆ«²î,¼ÆËã³ö´ó¸
+             -ÅÊý¾Ý
+  140   1        
+  141   1          temp_count /= CLKDIV;                                     //ÆµÂÊÌ«µÍÐèÒª·ÖÆµ
+  142   1        
+  143   1        if  (temp_count < 5764800UL)
+  144   1          return 5529600UL;
+  145   1        else if(temp_count < 8529600UL)
+  146   1          return 6000000UL;
+  147   1        else if(temp_count < 11529600UL)
+  148   1          return 11059200UL;
+  149   1        else if(temp_count < 15216000UL)
+  150   1          return  12000000UL;
+  151   1        else if(temp_count < 19216000UL)
+  152   1          return  18432000UL;
+  153   1        else if(temp_count < 21059200UL)
+  154   1          return  20000000UL;
+  155   1        else if(temp_count < 23059200UL)
+  156   1          return  22118400UL;
+  157   1        else if(temp_count < 25500000UL)
+  158   1          return  24000000UL;
+  159   1        else if(temp_count < 28500000UL)
+  160   1          return  27000000UL;
+  161   1        else if(temp_count < 31500000UL)
+  162   1          return  30000000UL;
+  163   1        else if(temp_count < 33500000UL)
+  164   1          return  33177600UL;
+  165   1        else if(temp_count < 35932000UL)
+  166   1          return  35000000UL;
+  167   1        else if(temp_count < 38432000UL)
+  168   1          return  36864000UL;
+  169   1        else if(temp_count < 42000000UL)
+  170   1          return  40000000UL;
+  171   1        else if(temp_count < 46000000UL)
+  172   1          return  44236800UL;
+  173   1        else 
+  174   1          return 48000000UL;
+  175   1      }
+  176          
+  177          void board_init(void)
+  178          {
+  179   1        SET_P54_RESRT;
+  180   1        
+  181   1        //»ñÈ¡ÏµÍ³ÆµÂÊ
+  182   1      #if (0 != FOSC)
+  183   1        sys_clk = FOSC;
+C251 COMPILER V5.60.0,  board                                                              13/07/22  15:38:04  PAGE 4   
+
+  184   1        set_clk(sys_clk);
+  185   1      #endif
+  186   1      
+  187   1      
+  188   1      #if (1 == EXTERNAL_CRYSTA_ENABLE)
+                 P_SW2 = 0x80;
+                 XOSCCR = 0xc0;      //Æô¶¯Íâ²¿¾§Õñ
+                 while (!(XOSCCR & 1));  //µÈ´ýÊ±ÖÓÎÈ¶¨
+                 CLKDIV = 0x00;      //Ê±ÖÓ²»·ÖÆµ
+                 CKSEL = 0x01;       //Ñ¡ÔñÍâ²¿¾§Õñ
+                 P_SW2 = 0x00;
+               #endif
+  196   1      
+  197   1        delay_init();     //ÑÓÊ±º¯Êý³õÊ¼»¯
+  198   1        
+  199   1        WTST = 0;
+  200   1        P_SW2 |= 0x80;
+  201   1        CLKDIV = 0;       //24MHzÖ÷Æµ£¬·ÖÆµÉèÖÃ   // ·ÖÆµÏµÊýÊÇ1
+  202   1        
+  203   1        P0M0 = 0x00;
+  204   1        P0M1 = 0x00;
+  205   1        P1M0 = 0x00;
+  206   1        P1M1 = 0x00;
+  207   1        P2M0 = 0x00;
+  208   1        P2M1 = 0x00;
+  209   1        P3M0 = 0x00;
+  210   1        P3M1 = 0x00;
+  211   1        P4M0 = 0x00;
+  212   1        P4M1 = 0x00;
+  213   1        P5M0 = 0x00;
+  214   1        P5M1 = 0x00;
+  215   1        P6M0 = 0x00;
+  216   1        P6M1 = 0x00;
+  217   1        P7M0 = 0x00;
+  218   1        P7M1 = 0x00;
+  219   1        
+  220   1        ADCCFG = 0;
+  221   1        AUXR = 0;
+  222   1        SCON = 0;
+  223   1        S2CON = 0;
+  224   1        S3CON = 0;
+  225   1        S4CON = 0;
+  226   1        P_SW1 = 0;
+  227   1        P_SW2 = 0;
+  228   1        IE2 = 0;
+  229   1        TMOD = 0;
+  230   1      
+  231   1        uart_init(DEBUG_UART, DEBUG_UART_RX_PIN, DEBUG_UART_TX_PIN, DEBUG_UART_BAUD, DEBUG_UART_TIM);
+  232   1      }
+  233          
+  234          
+  235          #if (1 == PRINTF_ENABLE)      //³õÊ¼»¯µ÷ÊÔ´®¿Ú
+  236          //ÖØ¶¨Òåprintf Êý×Ö Ö»ÄÜÊä³öuint16
+  237          char putchar(char c)
+  238          {
+  239   1        uart_putchar(UART_1, c);//°Ñ×Ô¼ºÊµÏÖµÄ´®¿Ú´òÓ¡Ò»×Ö½ÚÊý¾ÝµÄº¯ÊýÌæ»»µ½ÕâÀï
+  240   1      
+  241   1        return c;
+  242   1      }
+  243          #endif
+  244          
+  245          void DisableGlobalIRQ(void)
+  246          {
+  247   1        EA = 0;
+  248   1      }
+  249          
+C251 COMPILER V5.60.0,  board                                                              13/07/22  15:38:04  PAGE 5   
+
+  250          
+  251          void EnableGlobalIRQ(void)
+  252          {
+  253   1        EA = 1;
+  254   1      }
+  255          
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       775     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =         4     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =         8     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,193 @@
+C251 COMPILER V5.60.0,  LQ_Encoder                                                         21/12/21  22:07:38  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE LQ_Encoder
+OBJECT MODULE PLACED IN .\Objects\LQ_Encoder.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE user\LQ_Encoder.c LARGE INTR2 BROWSE INCDIR(.\user;.\user\Dianci) DEBU
+                    -G PRINT(.\Listings\LQ_Encoder.lst) TABS(2) OBJECT(.\Objects\LQ_Encoder.obj) 
+
+stmt  level    source
+
+    1          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+    2          【平    台】北京龙邱智能科技STC16核心板
+    3          【编    写】chiusir
+    4          【E-mail  】chiusir@163.com
+    5          【软件版本】V1.1 版权所有，单位使用请先联系授权
+    6          【最后更新】2021年1月23日
+    7          【相关信息参考下列地址】
+    8          【网    站】http://www.lqist.cn
+    9          【淘宝店铺】http://longqiu.taobao.com
+   10          ------------------------------------------------
+   11          【IDE】STC16
+   12          【Target 】 C251Keil5.6及以上
+   13          【SYS PLL】 30MHz使用内部晶振
+   14          =================================================================
+   15          STC16相关配套视频：
+   16          龙邱科技B站网址：https://space.bilibili.com/95313236
+   17          STC16环境下载参考视频： https://www.bilibili.com/video/BV1gy4y1p7T1/
+   18          STC16一体板子介绍视频： https://www.bilibili.com/video/BV1Jy4y1e7R4/
+   19          =================================================================
+   20          下载时, 选择时钟 30MHZ (用户可自行修改频率).
+   21          STC16F初次下载:先用IRCBND=0，ISP界面设置为24M，
+   22          然后IRCBND=0，下载频率为30M；
+   23          或者IRCBND=1，下载频率为30M；好用为准
+   24          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   25          #include "include.h"
+   26          
+   27          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   28          【函数名】ADC1_SingleChannel_Get(uint8_t ADC_Channel_x) 
+   29          【功  能】单位时间读取编码器计数
+   30          【参数值】u8 encno 编码器选择
+   31          【返回值】脉冲数，注意读取之间周期内，不要超过16位最大值
+   32          【最后更新】2021年1月22日 
+   33          【软件版本】V1.0
+   34          【使用举例】x=ADC_Read(8); //读取ADC8通道值
+   35          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   36          short Read_Encoder(u8 encno)
+   37          {
+   38   1        short data tm=0;
+   39   1        if(encno==1)
+   40   1        {
+   41   2          if(P07)//编码器1计数A:P06  DIR:P07  
+   42   2            tm=(T4H<<8)|T4L;  
+   43   2          else 
+   44   2            tm=0-(T4H<<8)|T4L;  
+   45   2          
+   46   2          T4T3M &= ~(1<<7);
+   47   2          T4H = 0;
+   48   2          T4L = 0;
+   49   2          T4T3M |= (1<<7);    
+   50   2        }
+   51   1        else if(encno==2)
+   52   1        {
+   53   2          if(P05)//编码器２计数A:P04  DIR:P05   
+   54   2            tm=(T3H<<8)|T3L;  
+   55   2          else
+   56   2            tm=0-(T3H<<8)|T3L;  
+   57   2          
+   58   2          T4T3M &= ~(1<<3);
+C251 COMPILER V5.60.0,  LQ_Encoder                                                         21/12/21  22:07:38  PAGE 2   
+
+   59   2          T3H = 0;
+   60   2          T3L = 0;
+   61   2          T4T3M |= (1<<3);    
+   62   2        } 
+   63   1        return tm;
+   64   1      }
+   65          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   66          【函数名】void Timer4EncInit(void)
+   67          【功  能】编码器初始化函数
+   68          【参数值】无
+   69          【返回值】无
+   70          【最后更新】2021年1月22日 
+   71          【软件版本】V1.0
+   72          【使用举例】2个编码器
+   73          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   74          void Timer34EncInit (void)
+   75          {   
+   76   1        /*
+   77   1        T4T3M &= ~0xf0;       //停止计数, 定时模式, 12T模式, 不输出时钟  
+   78   1        T4T3M &= ~0x01;       //不输出时钟
+   79   1        T4T3M |=  (1<<2);     //12T mode ;P0.4计数
+   80   1        T3H = 0;
+   81   1        T3L = 0;
+   82   1        
+   83   1        T4T3M |=  (1<<3);     //开始运行
+   84   1        //ET3 = 1;            //允许中断
+   85   1        
+   86   1        T4T3M &= ~0x10;       //不输出时钟
+   87   1        T4T3M |=  (1<<6);     //12T mode ;P0.6计数
+   88   1        T4H = 0;
+   89   1        T4L = 0; 
+   90   1        T4T3M |=  (1<<7);     //开始运行
+   91   1        //ET4 = 1;            //允许中断    
+   92   1        */
+   93   1        T3L = 0; 
+   94   1        T3H = 0;
+   95   1        T4T3M |= 0x0c; 
+   96   1        
+   97   1        T4L = 0;
+   98   1        T4H = 0;
+   99   1        T4T3M |= 0xc0; 
+  100   1      }
+  101          
+  102          
+  103          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+  104          【函数名】void TestEncoder(void)
+  105          【功  能】测试程序，TFT1.8显示
+  106          【参数值】无
+  107          【返回值】无
+  108          【最后更新】2021年1月22日 
+  109          【软件版本】V1.0
+  110          【使用举例】
+  111          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+  112          void TestEncoder(void)
+  113          {
+  114   1        char txt[16];
+  115   1        short duty = 20;
+  116   1        short enc1,enc2;
+  117   1        
+  118   1      //  OLED_CLS();                               // 清屏
+  119   1      //  OLED_P6x8Str(0, 0, "Test Encoder");         // 字符串显示
+  120   1      //  Timer34EncInit();                           // 编码器接口初始化
+  121   1        MotorInit(MOTOR_FREQUENCY);           // 电机初始化
+  122   1        while (1)
+  123   1        {
+  124   2          if (KEY_Read(KEY0) == 0)      // 按下KEY0键，占空比减小
+C251 COMPILER V5.60.0,  LQ_Encoder                                                         21/12/21  22:07:38  PAGE 3   
+
+  125   2          {
+  126   3            if (duty > -PWM2_CLOCK/MOTOR_FREQUENCY) // 满占空比为10M/12.5k=800
+  127   3              duty -= 50;
+  128   3          }
+  129   2          if (KEY_Read(KEY2) == 0)      // 按下KEY2键，占空比加大
+  130   2          {
+  131   3            if (duty < PWM2_CLOCK/MOTOR_FREQUENCY)  // 满占空比为10M/12.5k=800
+  132   3              duty += 50;
+  133   3          }
+  134   2          if (KEY_Read(KEY1) == 0)      // 按下KEY1键，占空比中值
+  135   2          {
+  136   3            duty = 20;
+  137   3          }
+  138   2          
+  139   2          MotorCtrl(duty,duty);
+  140   2          
+  141   2          /* 获取编码器值 */
+  142   2          enc1 = Read_Encoder(1);               // 左电机 母板上编码器1，小车前进为负值
+  143   2          enc2 = Read_Encoder(2);               // 右电机 母板上编码器2，小车后退为正值
+  144   2          sprintf(txt, "Enc1: %04d  ", enc1);
+  145   2          OLED_P6x8Str(0, 3, txt);              // 字符串显示
+  146   2          sprintf(txt, "PWM: %05d;", duty);
+  147   2          OLED_P6x8Str(0, 4, txt);            // 字符串显示
+  148   2          sprintf(txt, "Enc2: %04d  ", enc2);
+  149   2          OLED_P6x8Str(0, 5, txt);              // 字符串显示
+  150   2          
+  151   2          LED_Ctrl(LED0, RVS);                    // 电平翻转,LED闪烁
+  152   2          delayms(50);                // 延时等待
+  153   2        }
+  154   1      }
+  155          //
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       341     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------         18
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        37     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

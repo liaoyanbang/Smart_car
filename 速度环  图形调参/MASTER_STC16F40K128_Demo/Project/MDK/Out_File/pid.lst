@@ -1,0 +1,75 @@
+C251 COMPILER V5.60.0,  pid                                                                05/06/22  22:30:47  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE pid
+OBJECT MODULE PLACED IN .\Out_File\pid.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\USER\src\pid.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\..\Lib
+                    -raries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\src;
+                    -.\Out_File) DEBUG PRINT(.\Out_File\pid.lst) TABS(2) OBJECT(.\Out_File\pid.obj) 
+
+stmt  level    source
+
+    1          #include "pid.h"
+    2          
+    3          float Velocity_KP_L = 6.0,Velocity_KI_L = 2.5 ,Velocity_KD_L = 0;
+    4          
+    5          float Velocity_KP_R = 8.3,Velocity_KI_R = 2.2 ,Velocity_KD_R = 0;
+    6          
+    7          int abs_int(int p)
+    8          {
+    9   1        if(p>=0) return p;
+   10   1        else return -p;
+   11   1      }
+   12          
+   13          int Incremental_PI_L (int16 Encoder,int16 Target)
+   14          {   
+   15   1         static int16 Bias=0,Last_bias=0,Last_last_bias=0;
+   16   1         static int16 Pwm = 0;
+   17   1         Bias = Target-Encoder; //Calculate the deviation //计算偏差
+   18   1         Pwm += Velocity_KP_L * (Bias-Last_bias) + Velocity_KI_L* Bias + Velocity_KD_L*(Bias-2* Last_bias + Last
+             -_last_bias); 
+   19   1         if(Pwm>7200)Pwm= 7200;
+   20   1         if(Pwm<-7200)Pwm= -7200;
+   21   1         Last_last_bias= Last_bias;
+   22   1         Last_bias=Bias; //Save the last deviation //保存上一次偏差
+   23   1         return Pwm;    
+   24   1      }
+   25          int Incremental_PI_R (int16 Encoder,int16 Target)
+   26          {  
+   27   1         static int16 Bias=0,Last_bias=0,Last_last_bias=0;
+   28   1         static int16 Pwm = 0;
+   29   1         Bias = Target-Encoder; //Calculate the deviation //计算偏差
+   30   1         Pwm += Velocity_KP_R * (Bias-Last_bias) + Velocity_KI_R * Bias + Velocity_KD_R*(Bias- 2* Last_bias + La
+             -st_last_bias);  
+   31   1         if(Pwm>7200)Pwm= 7200;
+   32   1         if(Pwm<-7200)Pwm= -7200;
+   33   1         Last_last_bias= Last_bias;
+   34   1         Last_bias=Bias; //Save the last deviation //保存上一次偏差 
+   35   1         return Pwm;
+   36   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       326     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        40     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        96     ------
+C251 COMPILER V5.60.0,  pid                                                                05/06/22  22:30:47  PAGE 2   
+
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

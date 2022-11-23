@@ -1,0 +1,155 @@
+C251 COMPILER V5.60.0,  ANO_DT                                                             21/12/21  22:07:38  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE ANO_DT
+OBJECT MODULE PLACED IN .\Objects\ANO_DT.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE user\ANO_DT.c LARGE INTR2 BROWSE INCDIR(.\user;.\user\Dianci) DEBUG PR
+                    -INT(.\Listings\ANO_DT.lst) TABS(2) OBJECT(.\Objects\ANO_DT.obj) 
+
+stmt  level    source
+
+    1          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+    2          【平    台】北京龙邱智能科技STC16核心板
+    3          【编    写】chiusir
+    4          【E-mail  】chiusir@163.com
+    5          【软件版本】V1.1 版权所有，单位使用请先联系授权
+    6          【最后更新】2021年1月23日
+    7          【相关信息参考下列地址】
+    8          【网    站】http://www.lqist.cn
+    9          【淘宝店铺】http://longqiu.taobao.com
+   10          ------------------------------------------------
+   11          【IDE】STC16
+   12          【Target 】 C251Keil5.6及以上
+   13          【SYS PLL】 30MHz使用内部晶振
+   14          =================================================================
+   15          STC16相关配套视频：
+   16          龙邱科技B站网址：https://space.bilibili.com/95313236
+   17          STC16环境下载参考视频： https://www.bilibili.com/video/BV1gy4y1p7T1/
+   18          STC16一体板子介绍视频： https://www.bilibili.com/video/BV1Jy4y1e7R4/
+   19          =================================================================
+   20          下载时, 选择时钟 30MHZ (用户可自行修改频率).
+   21          STC16F初次下载:先用IRCBND=0，ISP界面设置为24M，
+   22          然后IRCBND=0，下载频率为30M；
+   23          或者IRCBND=1，下载频率为30M；好用为准
+   24          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+   25          
+   26          配合匿名地面站上位机
+   27          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   28          #include <LQ_UART.h>
+   29          #include <ANO_DT.h>
+   30          
+   31          //使用匿名4.3上位机协议
+   32          /////////////////////////////////////////////////////////////////////////////////////
+   33          //数据拆分宏定义，在发送大于1字节的数据类型时，比如int16、float等，需要把数据拆分成单独字节进行发送
+   34          #define BYTE0(dwTemp)       ( *( (char *)(&dwTemp)    ) )     /*!< uint32_t 数据拆分 byte0  */
+   35          #define BYTE1(dwTemp)       ( *( (char *)(&dwTemp) + 1) )     /*!< uint32_t 数据拆分 byte1  */
+   36          #define BYTE2(dwTemp)       ( *( (char *)(&dwTemp) + 2) )     /*!< uint32_t 数据拆分 byte2  */
+   37          #define BYTE3(dwTemp)       ( *( (char *)(&dwTemp) + 3) )     /*!< uint32_t 数据拆分 byte3  */
+   38          
+   39          /*!
+   40            * @brief    Send_Data函数是协议中所有发送数据功能使用到的发送函数
+   41            *
+   42            * @param    dataToSend   :   要发送的数据首地址
+   43            * @param    length       :   要发送的数据长度
+   44            *
+   45            * @return   无
+   46            *
+   47            * @note     移植时，用户应根据自身应用的情况，根据使用的通信方式，实现此函数
+   48            *
+   49            * @see      内部调用
+   50            *
+   51            * @date     2019/5/28 星期二
+   52            */
+   53          void ANO_DT_Send_Data(unsigned char *dataToSend , unsigned short length)
+   54          {
+   55   1      
+   56   1          /**使用串口正常发送数据，大概需要1.5ms*/
+   57   1        UART4_PutBuff(dataToSend, length);     //可以修改不同的串口发送数据
+   58   1      
+C251 COMPILER V5.60.0,  ANO_DT                                                             21/12/21  22:07:38  PAGE 2   
+
+   59   1      }
+   60          /**  发送数据缓存 */
+   61          unsigned char data_to_send[50];
+   62          
+   63          /*!
+   64            * @brief    向上位机发送发送8个int16_t数据
+   65            *
+   66            * @param    data1 - data8  ： 发送给上位机显示波形
+   67            *
+   68            * @return   无
+   69            *
+   70            * @note     无
+   71            *
+   72            * @see      ANO_DT_send_int16(1, 2, 3, 0, 0, 0, 0, 0);
+   73            *
+   74            * @date     2019/5/28 星期二
+   75            */
+   76          void ANO_DT_send_int16(short data1, short data2, short data3, short data4, short data5, short data6, shor
+             -t data7, short data8 )
+   77          {
+   78   1        unsigned char  _cnt=0;
+   79   1        unsigned char  sum = 0, i = 0;
+   80   1        
+   81   1        data_to_send[_cnt++] = 0xAA;      //匿名协议帧头  0xAAAA
+   82   1        data_to_send[_cnt++] = 0xAA;
+   83   1        data_to_send[_cnt++] = 0xF1;      //使用用户协议帧0xF1
+   84   1        data_to_send[_cnt++] = 16;        //8个int16_t 长度 16个字节
+   85   1      
+   86   1        data_to_send[_cnt++]=BYTE1(data1);
+   87   1        data_to_send[_cnt++]=BYTE0(data1);
+   88   1      
+   89   1        data_to_send[_cnt++]=BYTE1(data2);
+   90   1        data_to_send[_cnt++]=BYTE0(data2);
+   91   1      
+   92   1        data_to_send[_cnt++]=BYTE1(data3);
+   93   1        data_to_send[_cnt++]=BYTE0(data3);
+   94   1      
+   95   1        data_to_send[_cnt++]=BYTE1(data4);
+   96   1        data_to_send[_cnt++]=BYTE0(data4);
+   97   1      
+   98   1        data_to_send[_cnt++]=BYTE1(data5);
+   99   1        data_to_send[_cnt++]=BYTE0(data5);
+  100   1      
+  101   1        data_to_send[_cnt++]=BYTE1(data6);
+  102   1        data_to_send[_cnt++]=BYTE0(data6);
+  103   1      
+  104   1        data_to_send[_cnt++]=BYTE1(data7);
+  105   1        data_to_send[_cnt++]=BYTE0(data7);
+  106   1      
+  107   1        data_to_send[_cnt++]=BYTE1(data8);
+  108   1        data_to_send[_cnt++]=BYTE0(data8);
+  109   1      
+  110   1        sum = 0;
+  111   1        for(i=0;i<_cnt;i++)
+  112   1          sum += data_to_send[i];
+  113   1        data_to_send[_cnt++]=sum; 
+  114   1        
+  115   1        ANO_DT_Send_Data(data_to_send ,_cnt);
+  116   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       338     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+C251 COMPILER V5.60.0,  ANO_DT                                                             21/12/21  22:07:38  PAGE 3   
+
+  pdata size           =    ------     ------
+  xdata size           =        50         16
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

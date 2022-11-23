@@ -1,0 +1,113 @@
+C251 COMPILER V5.60.0,  ANO_DT                                                             16/03/22  15:38:05  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE ANO_DT
+OBJECT MODULE PLACED IN .\Out_File\ANO_DT.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\USER\src\ANO_DT.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\..\
+                    -Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\s
+                    -rc;.\Out_File) DEBUG PRINT(.\Out_File\ANO_DT.lst) TABS(2) OBJECT(.\Out_File\ANO_DT.obj) 
+
+stmt  level    source
+
+    1          #include "ANO_DT.h"
+    2          
+    3          
+    4          uint8 send_flag ;
+    5          
+    6          uint8 data_to_send[50] = {0};
+    7          
+    8          
+    9          
+   10          //移植时，用户应根据自身应用的情况，根据使用的通信方式，实现此函数，这里就采用有线连接，发送至串口2了
+   11          void ANO_DT_Send_Data(uint8 *dataToSend , uint8 length)
+   12          {
+   13   1      /**使用串口正常发送数据，大概需要1.5ms*/
+   14   1        uart_putbuff(UART_1,dataToSend,length); //可以修改不同的串口发送数据
+   15   1      
+   16   1      }
+   17          
+   18          //通信协议函数
+   19          void ANO_DT_SendtoUSER(uint16 data1, uint16 data2, uint16 data3,uint16 data4) 
+   20          {
+   21   1        uint8 _cnt=0,sum = 0,i;
+   22   1        data_to_send[_cnt++]=0xAA;
+   23   1        data_to_send[_cnt++]=0xAA;
+   24   1        data_to_send[_cnt++]=0xF1; //自定义帧1
+   25   1        data_to_send[_cnt++]=0;    //这是len位，后面 _cnt-4来赋值
+   26   1      
+   27   1        data_to_send[_cnt++]=BYTE1(data1);
+   28   1        data_to_send[_cnt++]=BYTE0(data1);//数据部分
+   29   1          
+   30   1        data_to_send[_cnt++]=BYTE1(data2);
+   31   1        data_to_send[_cnt++]=BYTE0(data2);//数据部分
+   32   1        
+   33   1        data_to_send[_cnt++]=BYTE1(data3);
+   34   1        data_to_send[_cnt++]=BYTE0(data3);//数据部分
+   35   1        
+   36   1        data_to_send[_cnt++]=BYTE1(data4);
+   37   1        data_to_send[_cnt++]=BYTE0(data4);//数据部分
+   38   1        
+   39   1        data_to_send[3] = _cnt-4;//长度位
+   40   1        
+   41   1        for(i=0;i<_cnt;i++)
+   42   1          sum += data_to_send[i];
+   43   1        
+   44   1        data_to_send[_cnt++]=sum;//校验位
+   45   1        
+   46   1        ANO_DT_Send_Data(data_to_send, _cnt);
+   47   1      }
+   48          
+   49          
+   50          ////结合定时器，设置各个数据发送标志位，可以定期发送各种数据到上位机。
+   51          ////Data_Exchange函数处理各种数据发送请求，比如想实现每5ms发送一次传感器数据至上位机，即在此函数内实现
+   52          ////此函数每1ms调用一次
+   53          //void ANO_DT_Data_Exchange(void)
+   54          //{
+   55          //  static uint8_t cnt  = 0;
+   56          //  cnt++;
+   57          //  if(cnt>=10)//10MS
+C251 COMPILER V5.60.0,  ANO_DT                                                             16/03/22  15:38:05  PAGE 2   
+
+   58          //  {
+   59          //    cnt = 0;
+   60          //    send_flag = 1;
+   61          //  } 
+   62          //  
+   63          //    //HAL_GPIO_TogglePin(LED0_GPIO_Port,LED0_Pin);
+   64          //  if(send_flag)
+   65          //  {
+   66          //    send_flag = 0;
+   67          //   // ANO_DT_SendtoUSER(Servo_pid.x_curr_posi,Servo_pid.y_curr_posi,Servo_pid.x_curr_angle,Servo_pid.y_c
+             -urr_angle);
+   68          //  
+   69          //    ANO_DT_SendtoUSER(Position_y[0],Position_y[1],Position_y[2],Position_y[3]);
+   70          //  }
+   71          //}
+   72          
+   73          
+*** WARNING C183 IN LINE 37 OF ..\USER\src\ANO_DT.c: dead assignment eliminated
+*** WARNING C183 IN LINE 44 OF ..\USER\src\ANO_DT.c: dead assignment eliminated
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       186     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        51          8
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        54     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  2 WARNING(S),  0 ERROR(S)

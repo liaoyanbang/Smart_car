@@ -1,0 +1,36 @@
+C251 COMPILER V5.60.0,  dianci                                                             16/01/22  19:12:43  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE dianci
+OBJECT MODULE PLACED IN .\Out_File\dianci.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\USER\src\dianci.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\..\
+                    -Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\s
+                    -rc) DEBUG PRINT(.\Out_File\dianci.lst) TABS(2) OBJECT(.\Out_File\dianci.obj) 
+
+stmt  level    source
+
+*** WARNING C38 IN LINE 1 OF ..\USER\src\dianci.c: empty translation unit
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =    ------     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

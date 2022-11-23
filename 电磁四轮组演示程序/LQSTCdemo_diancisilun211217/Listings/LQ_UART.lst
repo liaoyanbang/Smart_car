@@ -1,0 +1,287 @@
+C251 COMPILER V5.60.0,  LQ_UART                                                            21/12/21  22:07:38  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE LQ_UART
+OBJECT MODULE PLACED IN .\Objects\LQ_UART.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE user\LQ_UART.c LARGE INTR2 BROWSE INCDIR(.\user;.\user\Dianci) DEBUG P
+                    -RINT(.\Listings\LQ_UART.lst) TABS(2) OBJECT(.\Objects\LQ_UART.obj) 
+
+stmt  level    source
+
+    1          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+    2          ¡¾Æ½    Ì¨¡¿±±¾©ÁúÇñÖÇÄÜ¿Æ¼¼STC16ºËÐÄ°å
+    3          ¡¾ÐÞ    ¸Ä¡¿chiusir
+    4          ¡¾E-mail  ¡¿chiusir@163.com
+    5          ¡¾Èí¼þ°æ±¾¡¿V1.1 °æÈ¨ËùÓÐ£¬µ¥Î»Ê¹ÓÃÇëÏÈÁªÏµÊÚÈ¨
+    6          ¡¾×îºó¸üÐÂ¡¿2021Äê1ÔÂ23ÈÕ
+    7          ¡¾Ïà¹ØÐÅÏ¢²Î¿¼ÏÂÁÐµØÖ·¡¿
+    8          ¡¾Íø    Õ¾¡¿http://www.lqist.cn
+    9          ¡¾ÌÔ±¦µêÆÌ¡¿http://longqiu.taobao.com
+   10          ------------------------------------------------
+   11          ¡¾IDE¡¿STC16
+   12          ¡¾Target ¡¿ C251Keil5.6¼°ÒÔÉÏ
+   13          ¡¾SYS PLL¡¿ 30MHzÊ¹ÓÃÄÚ²¿¾§Õñ
+   14          =================================================================
+   15          STC16Ïà¹ØÅäÌ×ÊÓÆµ£º
+   16          ÁúÇñ¿Æ¼¼BÕ¾ÍøÖ·£ºhttps://space.bilibili.com/95313236
+   17          STC16»·¾³ÏÂÔØ²Î¿¼ÊÓÆµ£º https://www.bilibili.com/video/BV1gy4y1p7T1/
+   18          STC16Ò»Ìå°å×Ó½éÉÜÊÓÆµ£º https://www.bilibili.com/video/BV1Jy4y1e7R4/
+   19          =================================================================
+   20          ÏÂÔØÊ±, Ñ¡ÔñÊ±ÖÓ 30MHZ (ÓÃ»§¿É×ÔÐÐÐÞ¸ÄÆµÂÊ).
+   21          STC16F³õ´ÎÏÂÔØ:ÏÈÓÃIRCBND=0£¬ISP½çÃæÉèÖÃÎª24M£¬
+   22          È»ºóIRCBND=0£¬ÏÂÔØÆµÂÊÎª30M£»
+   23          »òÕßIRCBND=1£¬ÏÂÔØÆµÂÊÎª30M£»ºÃÓÃÎª×¼
+   24          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   25          #include "include.h"
+   26          
+   27          u8 Uart4_Receive;
+   28          #define Baudrate1   (65536 - MAIN_Fosc / 115200 / 4)
+   29          #define Baudrate4   (65536 - MAIN_Fosc / 115200 / 4)
+   30          
+   31          //========================================================================
+   32          // º¯Êý: void UART1_int (void) interrupt UART1_VECTOR
+   33          // ÃèÊö: UART1ÖÐ¶Ïº¯Êý¡£
+   34          // ²ÎÊý: nine.
+   35          // ·µ»Ø: none.
+   36          // °æ±¾: VER1.0
+   37          // ÈÕÆÚ: 2014-11-28
+   38          // ±¸×¢: 
+   39          //========================================================================
+   40          void UART1_int (void) interrupt 4
+   41          {
+   42   1        if(RI)
+   43   1        {
+   44   2          RI = 0;    
+   45   2        }
+   46   1        
+   47   1        if(TI)
+   48   1        {
+   49   2          TI = 0;    
+   50   2        }
+   51   1      }
+   52          //========================================================================
+   53          // º¯Êý: void UART4_int (void) interrupt UART4_VECTOR
+   54          // ÃèÊö: UART4ÖÐ¶Ïº¯Êý¡£À¶ÑÀÒ£¿Ø¡£
+   55          // ²ÎÊý: nine.
+   56          // ·µ»Ø: none.
+   57          // °æ±¾: VER1.0
+   58          // ÈÕÆÚ: 2014-11-28
+C251 COMPILER V5.60.0,  LQ_UART                                                            21/12/21  22:07:38  PAGE 2   
+
+   59          // ±¸×¢: 
+   60          //========================================================================
+   61          extern short MotorDuty1, MotorDuty2,ServoDuty;          // µç»ú¶æ»úPMW±äÁ¿
+   62          extern unsigned char Flag_Stop;
+   63          extern short Velocity;
+   64          
+   65          void UART4_int (void) interrupt 18
+   66          {  
+   67   1        static int uart_receive=0;//À¶ÑÀ½ÓÊÕÏà¹Ø±äÁ¿
+   68   1        static u8 Flag_PID,i,j,Receive[50];                      
+   69   1        static float Data;                                       
+   70   1        
+   71   1        if((S4CON & 0x01) != 0)                                  
+   72   1          {                                                        
+   73   2          S4CON &= ~0x01;                               //Clear Rx flag
+   74   2                                                                       
+   75   2          uart_receive = S4BUF;                                      
+   76   2          Uart4_Receive = uart_receive;                              
+   77   2                                                   
+   78   2        
+   79   2        }                        
+   80   1      
+   81   1          if((S4CON & 0x02) != 0)
+   82   1          {
+   83   2              S4CON &= ~0x02;                           //Clear Tx flag        
+   84   2          } 
+   85   1      }
+   86          //========================================================================
+   87          // º¯Êý: SetTimer2Baudraye(u32 dat)
+   88          // ÃèÊö: ÉèÖÃTimer2×ö²¨ÌØÂÊ·¢ÉúÆ÷¡£
+   89          // ²ÎÊý: dat: Timer2µÄÖØ×°Öµ.
+   90          // ·µ»Ø: none.
+   91          // °æ±¾: VER1.0
+   92          // ÈÕÆÚ: 2014-11-28
+   93          // ±¸×¢: 
+   94          //========================================================================
+   95          void SetTimer2Baudraye(u32 dat)
+   96          {
+   97   1        AUXR &= ~(1<<4);                                         //Timer stop
+   98   1        AUXR &= ~(1<<3);                                         //Timer2 set As Timer
+   99   1        AUXR |=  (1<<2);                                         //Timer2 set as 1T mode
+  100   1        T2H = (u8)(dat / 256);
+  101   1        T2L = (u8)(dat % 256);
+  102   1        IE2  &= ~(1<<2);                                         //½ûÖ¹ÖÐ¶Ï
+  103   1        AUXR |=  (1<<4);                                         //Timer run enable
+  104   1      }
+  105          //========================================================================
+  106          // º¯Êý: void   UART1_config(u16 tmr)
+  107          // ÃèÊö: UART1³õÊ¼»¯º¯Êý¡£
+  108          // ²ÎÊý: tmr: Ñ¡Ôñ²¨ÌØÂÊ, 2: Ê¹ÓÃTimer2×ö²¨ÌØÂÊ, ÆäËüÖµ: Ê¹ÓÃTimer1×ö²¨ÌØÂÊ.
+  109          // ·µ»Ø: none.
+  110          // °æ±¾: VER1.0
+  111          // ÈÕÆÚ: 2014-11-28
+  112          // ±¸×¢: 
+  113          //========================================================================
+  114          void UART1_config(u16 tmr)
+  115          {  
+  116   1        /*********** ²¨ÌØÂÊÊ¹ÓÃ¶¨Ê±Æ÷2 *****************/
+  117   1        if(tmr == 2)
+  118   1        {
+  119   2          AUXR |= 0x01;                       //S1 tmr Use Timer2;
+  120   2          SetTimer2Baudraye(Baudrate1);
+  121   2        }
+  122   1        /*********** ²¨ÌØÂÊÊ¹ÓÃ¶¨Ê±Æ÷1 *****************/
+  123   1        else
+  124   1        {
+C251 COMPILER V5.60.0,  LQ_UART                                                            21/12/21  22:07:38  PAGE 3   
+
+  125   2          TR1 = 0;
+  126   2          AUXR &= ~0x01;                       //S1 tmr Use Timer1;
+  127   2          AUXR |=  (1<<6);                     //Timer1 set as 1T mode
+  128   2          TMOD &= ~(1<<6);                     //Timer1 set As Timer
+  129   2          TMOD &= ~0x30;                       //Timer1_16bitAutoReload;
+  130   2          TH1 = (u8)(Baudrate1 / 256);
+  131   2          TL1 = (u8)(Baudrate1 % 256);
+  132   2          ET1 = 0;                             //½ûÖ¹ÖÐ¶Ï
+  133   2          INTCLKO &= ~0x02;                                         //²»Êä³öÊ±ÖÓ
+  134   2          TR1  = 1;
+  135   2        }
+  136   1        /*************************************************/  
+  137   1        SCON = (SCON & 0x3f) | 0x40;                                //UART1Ä£Ê½, 0x00: Í¬²½ÒÆÎ»Êä³ö, 0x40: 8Î»Ê
+             -ý¾Ý,¿É±ä²¨ÌØÂÊ, 0x80: 9Î»Êý¾Ý,¹Ì¶¨²¨ÌØÂÊ, 0xc0: 9Î»Êý¾Ý,¿É±ä²¨ÌØÂÊ
+  138   1        //  PS  = 1;                                                    //¸ßÓÅÏÈ¼¶ÖÐ¶Ï
+  139   1        ES  = 1;                                                    //ÔÊÐíÖÐ¶Ï
+  140   1        REN = 1;                                                    //ÔÊÐí½ÓÊÕ
+  141   1        P_SW1 &= 0x3f;
+  142   1        //  P_SW1 |= 0x00;                                          //UART1 switch to, 0x00: P3.0 P3.1, 0x40: P
+             -3.6 P3.7, 0x80: P1.6 P1.7, 0xC0: P4.3 P4.4
+  143   1      }
+  144          
+  145          void UART4_config(u16 tmr)                                    // Ñ¡Ôñ²¨ÌØÂÊ, 2: Ê¹ÓÃTimer2×ö²¨ÌØÂÊ, ÆäËüÖ
+             -µ: Ê¹ÓÃTimer4×ö²¨ÌØÂÊ.
+  146          {
+  147   1        if(tmr == 2)
+  148   1        {
+  149   2          SetTimer2Baudraye(Baudrate4);
+  150   2          S4CON = 0x10;                                            //8Î»Êý¾Ý, Ê¹ÓÃTimer2×ö²¨ÌØÂÊ·¢ÉúÆ÷, ÔÊÐí½ÓÊ
+             -Õ
+  151   2        }
+  152   1        else
+  153   1        {
+  154   2          S4CON = 0x50;                                            //8Î»Êý¾Ý, Ê¹ÓÃTimer4×ö²¨ÌØÂÊ·¢ÉúÆ÷, ÔÊÐí½ÓÊ
+             -Õ
+  155   2          T4H = (Baudrate4) / 256;
+  156   2          T4L = (Baudrate4) % 256;
+  157   2          T4T3M = 0xA0;
+  158   2        }
+  159   1        IE2 |= 0x10;                                               //ÔÊÐíUART4ÖÐ¶Ï
+  160   1        //    P_SW2 &= ~0x04;                                      //UART4 switch bit2 to: 0: P0.2 P0.3
+  161   1        P_SW2 |= 0x04;                                             //UART4 switch bit2 to: 1: P5.2 P5.3
+  162   1      }
+  163          
+  164          /*************************************************************************
+  165          *  º¯ÊýÃû³Æ£ºvoid UART_PutChar(UART_t  uratn, char ch)
+  166          *  ¹¦ÄÜËµÃ÷£ºUART·¢ËÍ×Ö½Úº¯Êý,Ê¹ÓÃÇ°ÇëÏÈ³õÊ¼»¯¶ÔÓ¦´®¿Ú
+  167          *  ²ÎÊýËµÃ÷£ºuratn £º UART0 - UART3/ ch    £º Òª´òÓ¡µÄ×Ö·û
+  168          *  º¯Êý·µ»Ø£ºÎÞ
+  169          *  ÐÞ¸ÄÊ±¼ä£º2020Äê3ÔÂ10ÈÕ
+  170          *  ±¸    ×¢£ºUART_PutChar(UART0, 'a');  //´òÓ¡×Ö·ûa
+  171          *************************************************************************/
+  172          void UART1_PutChar(char ch)
+  173          {
+  174   1        SBUF = ch;    
+  175   1      }
+  176          void UART4_PutChar(char ch)
+  177          {
+  178   1        S4BUF = ch;    
+  179   1      }
+  180          
+  181          /*************************************************************************
+  182          *  º¯ÊýÃû³Æ£ºvoid UART_PutStr(UART_t  uratn, char *st)
+  183          *  ¹¦ÄÜËµÃ÷£ºUART·¢ËÍ×Ö·û´®º¯Êý(Óö NULL Í£Ö¹·¢ËÍ),Ê¹ÓÃÇ°ÇëÏÈ³õÊ¼»¯¶ÔÓ¦´®¿Ú
+  184          *  ²ÎÊýËµÃ÷£ºuratn £º UART0 - UART3/ str   £º Òª´òÓ¡µÄ×Ö·û´®µØÖ·
+  185          *  º¯Êý·µ»Ø£ºÎÞ
+C251 COMPILER V5.60.0,  LQ_UART                                                            21/12/21  22:07:38  PAGE 4   
+
+  186          *  ÐÞ¸ÄÊ±¼ä£º2020Äê3ÔÂ10ÈÕ
+  187          *  ±¸    ×¢£ºUART_PutStr(UART3, "123456789"); //·¢ËÍ9¸ö×Ö½Ú
+  188          *************************************************************************/
+  189          void UART1_PutStr(char *st)
+  190          {
+  191   1        while(*st)
+  192   1        {
+  193   2          UART1_PutChar(*st++);
+  194   2        }
+  195   1      }
+  196          void UART4_PutStr(char *st)
+  197          {
+  198   1        while(*st)
+  199   1        {
+  200   2          UART4_PutChar(*st++);
+  201   2        }
+  202   1      }
+  203          
+  204          /*************************************************************************
+  205          *  º¯ÊýÃû³Æ£ºvoid UART4_PutBuff(unsigned char *buff, unsigned long len)
+  206          *  ¹¦ÄÜËµÃ÷£ºUART·¢ËÍ×Ö½Úº¯Êý,Ê¹ÓÃÇ°ÇëÏÈ³õÊ¼»¯¶ÔÓ¦´®¿Ú
+  207          *  ²ÎÊýËµÃ÷£º
+  208          * @param    buff  £º Òª´òÓ¡µÄ×Ö·û´®µØÖ·
+  209          * @param    len   £º Òª´òÓ¡µÄ³¤¶È
+  210          *  º¯Êý·µ»Ø£ºÎÞ
+  211          *  ÐÞ¸ÄÊ±¼ä£º2020Äê3ÔÂ10ÈÕ
+  212          *  ±¸    ×¢£ºUART4_PutBuff("123456789",5);//Êµ¼Ê·¢ËÍ5¸ö×Ö½Ú¡®1¡¯¡®2¡¯¡®3¡¯¡®4¡¯¡®5¡¯
+  213          *************************************************************************/
+  214          void UART4_PutBuff(unsigned char *buff, unsigned long len)
+  215          {
+  216   1        while(len--)
+  217   1        {
+  218   2          UART4_PutChar(*buff);
+  219   2          buff++;
+  220   2        }
+  221   1      }
+  222          
+  223          /*************************************************************************
+  224          *  º¯ÊýÃû³Æ£ºchar UART_GetChar(UART_t  uratn)
+  225          *  ¹¦ÄÜËµÃ÷£ºUART¶ÁÈ¡×Ö½Ú Ê¹ÓÃÇ°ÇëÏÈ³õÊ¼»¯¶ÔÓ¦´®¿Ú µ÷ÓÃÇ°ÇëÈ·ÈÏÓÐ½ÓÊÕµ½Êý¾Ý ·ñÔò»áµÈ´ýÊý¾Ýµ½À´
+  226          *  ²ÎÊýËµÃ÷£ºuratn £º UART0 - UART3
+  227          *  º¯Êý·µ»Ø£º¶ÁÈ¡×Ö½Ú
+  228          *  ÐÞ¸ÄÊ±¼ä£º2020Äê3ÔÂ10ÈÕ
+  229          *  ±¸    ×¢£ºUART_GetChar(UART3); //½ÓÊÕÒ»¸ö×Ö·û
+  230          *************************************************************************/
+  231          char UART1_GetChar(void)
+  232          {  
+  233   1        return (SBUF);
+  234   1      }
+  235          char UART4_GetChar(void)
+  236          {  
+  237   1        return (S4BUF);
+  238   1      }
+  239          
+  240          //
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       310     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =        60          4
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+C251 COMPILER V5.60.0,  LQ_UART                                                            21/12/21  22:07:38  PAGE 5   
+
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =         7     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

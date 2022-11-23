@@ -1,0 +1,757 @@
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE isr
+OBJECT MODULE PLACED IN .\Out_File\isr.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\USER\src\isr.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\..\Lib
+                    -raries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\src;
+                    -.\Out_File) DEBUG PRINT(.\Out_File\isr.lst) TABS(2) OBJECT(.\Out_File\isr.obj) 
+
+stmt  level    source
+
+    1          ///******************************************************************************************************
+             -***************
+    2          // * COPYRIGHT NOTICE
+    3          // * Copyright (c) 2020,Öð·É¿Æ¼¼
+    4          // * All rights reserved.
+    5          // * ¼¼ÊõÌÖÂÛQQÈº£ºÒ»Èº£º179029047(ÒÑÂú)  ¶þÈº£º244861897(ÒÑÂú)  ÈýÈº£º824575535
+    6          // *
+    7          // * ÒÔÏÂËùÓÐÄÚÈÝ°æÈ¨¾ùÊôÖð·É¿Æ¼¼ËùÓÐ£¬Î´¾­ÔÊÐí²»µÃÓÃÓÚÉÌÒµÓÃÍ¾£¬
+    8          // * »¶Ó­¸÷Î»Ê¹ÓÃ²¢´«²¥±¾³ÌÐò£¬ÐÞ¸ÄÄÚÈÝÊ±±ØÐë±£ÁôÖð·É¿Æ¼¼µÄ°æÈ¨ÉùÃ÷¡£
+    9          // *
+   10          // * @file          isr
+   11          // * @company       ³É¶¼Öð·É¿Æ¼¼ÓÐÏÞ¹«Ë¾
+   12          // * @author        Öð·É¿Æ¼¼(QQ790875685)
+   13          // * @version       ²é¿´docÄÚversionÎÄ¼þ °æ±¾ËµÃ÷
+   14          // * @Software      MDK FOR C251 V5.60
+   15          // * @Target core   STC16F40K128
+   16          // * @Taobao        https://seekfree.taobao.com/
+   17          // * @date          2020-4-14
+   18          // ******************************************************************************************************
+             -**************/
+   19          #include "headfile.h"
+   20          
+   21          //UART1ÖÐ¶Ï
+   22          void UART1_Isr() interrupt 4
+   23          {
+   24   1          uint8 res;
+   25   1        static uint8 dwon_count;
+   26   1          if(UART1_GET_TX_FLAG)
+   27   1          {
+   28   2              UART1_CLEAR_TX_FLAG;
+   29   2              busy[1] = 0;
+   30   2          }
+   31   1          if(UART1_GET_RX_FLAG)
+   32   1          {
+   33   2              UART1_CLEAR_RX_FLAG;
+   34   2              res = SBUF;
+   35   2              //³ÌÐò×Ô¶¯ÏÂÔØ
+   36   2              if(res == 0x7F)
+   37   2              {
+   38   3                  if(dwon_count++ > 20)
+   39   3                      IAP_CONTR = 0x60;
+   40   3              }
+   41   2              else
+   42   2              {
+   43   3                  dwon_count = 0;
+   44   3              }
+   45   2          }
+   46   1      }
+   47          
+   48          //UART2ÖÐ¶Ï
+   49          void UART2_Isr() interrupt 8
+   50          {
+   51   1          if(UART2_GET_TX_FLAG)
+   52   1        {
+   53   2              UART2_CLEAR_TX_FLAG;
+   54   2              busy[2] = 0;
+   55   2        }
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 2   
+
+   56   1          if(UART2_GET_RX_FLAG)
+   57   1        {
+   58   2              UART2_CLEAR_RX_FLAG;
+   59   2          //½ÓÊÕÊý¾Ý¼Ä´æÆ÷Îª£ºS2BUF
+   60   2        }
+   61   1      }
+   62          
+   63          
+   64          //UART3ÖÐ¶Ï
+   65          void UART3_Isr() interrupt 17
+   66          {
+   67   1          if(UART3_GET_TX_FLAG)
+   68   1        {
+   69   2              UART3_CLEAR_TX_FLAG;
+   70   2              busy[3] = 0;
+   71   2        }
+   72   1          if(UART3_GET_RX_FLAG)
+   73   1        {
+   74   2              UART3_CLEAR_RX_FLAG;
+   75   2          //½ÓÊÕÊý¾Ý¼Ä´æÆ÷Îª£ºS3BUF
+   76   2        }
+   77   1      }
+   78          
+   79          
+   80          //UART4ÖÐ¶Ï
+   81          void UART4_Isr() interrupt 18
+   82          {
+   83   1          if(UART4_GET_TX_FLAG)
+   84   1        {
+   85   2              UART4_CLEAR_TX_FLAG;
+   86   2              busy[4] = 0;
+   87   2        }
+   88   1          if(UART4_GET_RX_FLAG)
+   89   1        {
+   90   2              UART4_CLEAR_RX_FLAG;
+   91   2      
+   92   2          //½ÓÊÕÊý¾Ý¼Ä´æÆ÷Îª£ºS4BUF;
+   93   2          if(wireless_type == WIRELESS_SI24R1)
+   94   2          {
+   95   3             wireless_uart_callback();           //ÎÞÏß×ª´®¿Ú»Øµ÷º¯Êý
+   96   3          }
+   97   2          else if(wireless_type == WIRELESS_CH9141)
+   98   2          {
+   99   3             bluetooth_ch9141_uart_callback();   //À¶ÑÀ×ª´®¿Ú»Øµ÷º¯Êý
+  100   3          }
+  101   2        }
+  102   1      }
+  103          
+  104          
+  105          #define Servo_Middle 645
+  106          short TempAngle = 0;   
+  107          
+  108          //ÂÖÌ¥ÖÜ³¤20.5cm¡¤  Ò»ÖÜ2320¸öÂö³å   1m/s  = 4.88r/s  =11317¸öÂö³å / s   5msµÄÖÜÆÚ Ó¦¸Ã¸ø 11317/200¸öÂö³å
+             - = 57  2m/s Îª114  
+  109          short GoalPulseLL=80;           // ¶¨Òå×óµç»úÈ«¾ÖÏÔÊ¾±äÁ¿
+  110          short GoalPulseRR=80;         // ¶¨ÒåÓÒµç»úÈ«¾ÖÏÔÊ¾±äÁ¿
+  111          short GoalPulseL=200;           // ¶¨Òå×óµç»úÈ«¾ÖÊäÈëÁ¿
+  112          short GoalPulseR=200;           // ¶¨ÒåÓÒµç»úÈ«¾ÖÊäÈëÁ¿
+  113          
+  114          short MotorDutyL;             // ¶¨Òå×óµç»úÈ«¾ÖÊä³öÁ¿
+  115          short MotorDutyR;             // ¶¨ÒåÓÒµç»úÈ«¾ÖÊä³öÁ¿
+  116          
+  117          short PulseL = 0;          // ¶¨Òå×ó±àÂëÆ÷È«¾Ö±äÁ¿ 
+  118          short PulseR = 0;          // ¶¨ÒåÓÒ±àÂëÆ÷È«¾Ö±äÁ¿
+  119          short MtTargetDuty =0;     // µç»úPWM
+  120          
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 3   
+
+  121          short ServoDuty =Servo_Middle;
+  122          short Last_Duty = 0;
+  123          short chashu = 10;
+  124          float f_duoji;
+  125          float f_tanA;
+  126          
+  127          #define Servo_Left_Max 715
+  128          #define Servo_Right_Min 550
+  129          #define DIR1 P44  //×óÂÖ·½Ïò
+  130          #define DIR2 P63  //ÓÒÂÖ·½Ïò
+  131          #define LED P52
+  132          short flag_star =0;
+  133          void INT0_Isr() interrupt 0
+  134          {
+  135   1        delay_ms(255);
+  136   1        LED = !LED; //·´×ªLED
+  137   1        if(flag_star)
+  138   1          flag_star =0;
+  139   1        else flag_star = 1;
+  140   1      }
+  141          void INT1_Isr() interrupt 2
+  142          {
+  143   1        delay_ms(255);
+  144   1        LED = !LED; //·´×ªLED
+  145   1      }
+  146          void INT2_Isr() interrupt 10
+  147          {
+  148   1        delay_ms(500);
+  149   1        LED = !LED; //·´×ªLED
+  150   1        INT2_CLEAR_FLAG;  //Çå³ýÖÐ¶Ï±êÖ¾
+  151   1      }
+  152          void INT3_Isr() interrupt 11
+  153          {
+  154   1        delay_ms(500);
+  155   1        LED = !LED; //·´×ªLED
+  156   1        INT3_CLEAR_FLAG;  //Çå³ýÖÐ¶Ï±êÖ¾
+  157   1      }
+  158          
+  159          void INT4_Isr() interrupt 16
+  160          {
+  161   1        INT4_CLEAR_FLAG;  //Çå³ýÖÐ¶Ï±êÖ¾
+  162   1      }
+  163          
+  164          
+  165          int16 dig1,dig2,dig3;// dig1ÄÚ²à²îÖµ  dig2Íâ²àË®Æ½²îÖµ  dig3Íâ²à´¹Ö±²îÖµ
+  166          int16 angle;
+  167          short count =0;
+  168          short jianshu_flag=0,jiashu_flag=0;
+  169          int16 AD_V[7];//µç¸ÐÖµ
+  170          int16 AD[7];//¹éÒ»»¯µÄÖµ 0~100
+  171          float sensor_to_one[7];//¹éÒ»»¯µÄÖµ 0~1
+  172          enum 
+  173          {
+  174            Normal = 1,
+  175            Fork_L,
+  176            Fork_R,
+  177            Round_L,
+  178            Round_R,
+  179            Cross,
+  180            Descent
+  181          } Position;
+  182          
+  183          enum 
+  184          {
+  185            Forking=1,
+  186            Fork_In,
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 4   
+
+  187            Forkout
+  188          } Fork_Process;
+  189          
+  190          enum 
+  191          {
+  192            Round_In=1,
+  193            Rounding,
+  194            Round_Out
+  195          } Round_Process;
+  196          
+  197          enum 
+  198          {
+  199            Crossing=1,
+  200            Crossover
+  201          } Cross_Process;
+  202          
+  203          enum 
+  204          {
+  205            Descenting=1,
+  206            Descentover
+  207          }Descent_Process;
+  208          
+  209          void Read_ADC(void)
+  210          {
+  211   1        int16  i,j,k,temp;
+  212   1        int16  ad_valu[7][5],ad_sum[7];
+  213   1        for(i=0;i<5;i++)
+  214   1        {
+  215   2          ad_valu[0][i]=adc_once(ADC_P00,ADC_10BIT);
+  216   2          ad_valu[1][i]=adc_once(ADC_P01,ADC_10BIT);
+  217   2          ad_valu[2][i]=adc_once(ADC_P05,ADC_10BIT);
+  218   2          ad_valu[3][i]=adc_once(ADC_P06,ADC_10BIT);//
+  219   2          ad_valu[4][i]=adc_once(ADC_P13,ADC_10BIT);//
+  220   2          ad_valu[5][i]=adc_once(ADC_P14,ADC_10BIT);
+  221   2          ad_valu[6][i]=adc_once(ADC_P15,ADC_10BIT);
+  222   2        }
+  223   1        //Ã°ÅÝÅÅÐò///
+  224   1            for(i=0;i<7;i++)     //7¸öµç¸Ð     
+  225   1            {
+  226   2               for(j=0;j<4;j++)  //Îå¸öÊý¾ÝÅÅÐò
+  227   2               {
+  228   3                  for(k=0;k<4-j;k++)
+  229   3                  {
+  230   4                     if(ad_valu[i][k] > ad_valu[i][k+1])  //Ç°ÃæµÄ±ÈºóÃæµÄ´ó  Ôò½øÐÐ½»»»
+  231   4                     {
+  232   5                        temp = ad_valu[i][k+1];
+  233   5                        ad_valu[i][k+1] = ad_valu[i][k];
+  234   5                        ad_valu[i][k] = temp;
+  235   5                     }
+  236   4                  }
+  237   3               }
+  238   2            }
+  239   1            for(i=0;i<7;i++)    //ÇóÖÐ¼äÈýÏîµÄºÍ
+  240   1            {
+  241   2               ad_sum[i] = ad_valu[i][1] + ad_valu[i][2] + ad_valu[i][3];       
+  242   2               AD_V[i] = ad_sum[i] / 3.0;
+  243   2            }
+  244   1      }
+  245          int16 min_v = 0;
+  246          int16 max_v = 700;
+  247          void Date_analyse()
+  248          { 
+  249   1           int16  i; 
+  250   1           static int16 max_old = 1,max_crosstalk = 1;
+  251   1           static int16 position_last = 2;
+  252   1           Read_ADC();
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 5   
+
+  253   1           
+  254   1           /*********************¹éÒ»»¯´¦Àí********************/
+  255   1           for(i=0;i<7;i++) 
+  256   1           {
+  257   2              //AD_V[i] = 2;
+  258   2              sensor_to_one[i] = (float)(AD_V[i] - min_v)/(float)(max_v - min_v); //×î´ó×îÐ¡Öµ¿É¸ÄÎªÊý×é 
+  259   2              if(sensor_to_one[i]<=0.0)  sensor_to_one[i]=0.001;
+  260   2              if(sensor_to_one[i]>1.0)  sensor_to_one[i]=1.0; 
+  261   2              AD[i] = 100*sensor_to_one[i];     //AD[i]Îª¹éÒ»»¯ºóµÄÖµ  ·¶Î§Îª0-100
+  262   2          }
+  263   1          dig1 = AD[2]-AD[4];
+  264   1          dig2 = AD[1]-AD[5];
+  265   1          dig3 = AD[0]-AD[6];
+  266   1           
+  267   1      }    
+  268          void TM0_Isr() interrupt 1
+  269          { 
+  270   1      }
+  271          float yaw;
+  272          short PulseLL = 0;
+  273          void TM1_Isr() interrupt 3
+  274          {
+  275   1          static int16 flag = 0;
+  276   1      //    static time  = 0 ;
+  277   1      //    time++;
+  278   1      //    if(time==20)
+  279   1      //    {
+  280   1      //    if(flag==0)
+  281   1      //    {
+  282   1      //      GoalPulseL+=10;
+  283   1      //      GoalPulseR+=10;
+  284   1      //      if(GoalPulseL>=100)
+  285   1      //      {
+  286   1      //        flag = 1;
+  287   1      //      }
+  288   1      //    }
+  289   1      //    else 
+  290   1      //    {
+  291   1      //      GoalPulseL-=10;
+  292   1      //      GoalPulseR-=10;
+  293   1      //      if(GoalPulseL<=30)
+  294   1      //      {
+  295   1      //        flag = 0;
+  296   1      //      }
+  297   1      //    }
+  298   1      //    time=0;
+  299   1          //}
+  300   1          PulseL = ctimer_count_read(CTIM0_P34);//¶ÁÈ¡±àÂëÆ÷µÄÖµ
+  301   1          //PulseLL += PulseL;
+  302   1          PulseR = 0- ctimer_count_read(CTIM3_P04);
+  303   1          if(flag_star)
+  304   1          {
+  305   2              MotorDutyL = Incremental_PI_L(PulseL,GoalPulseL);
+  306   2              MotorDutyR = Incremental_PI_R(PulseR,GoalPulseR);
+  307   2          }
+  308   1          
+  309   1          if(MotorDutyL>=0) DIR1=1;
+  310   1          else {DIR1=0; MotorDutyL= 0-MotorDutyL;}
+  311   1          if(MotorDutyR>=0) DIR2=1;
+  312   1          else {DIR2=0; MotorDutyR= 0-MotorDutyR;}
+  313   1          if(flag_star==0)
+  314   1          {
+  315   2            MotorDutyL=MotorDutyR=0;
+  316   2          }
+  317   1          
+  318   1          pwm_duty(PWMA_CH2P_P62,MotorDutyL);  //×ó±ßµç»ú
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 6   
+
+  319   1          pwm_duty(PWMA_CH1P_P60,MotorDutyR);  //ÓÒ±ßµç»ú
+  320   1          
+  321   1      }
+  322          
+  323          void TM2_Isr() interrupt 12
+  324          {
+  325   1        TIM2_CLEAR_FLAG;  //Çå³ýÖÐ¶Ï±êÖ¾
+  326   1      }
+  327          void TM3_Isr() interrupt 19
+  328          {
+  329   1        TIM3_CLEAR_FLAG; //Çå³ýÖÐ¶Ï±êÖ¾
+  330   1        
+  331   1      }
+  332          
+  333          void TM4_Isr() interrupt 20
+  334          {
+  335   1        TIM4_CLEAR_FLAG; //Çå³ýÖÐ¶Ï±êÖ¾
+  336   1      //  ccd_collect();   //CCD²É¼¯Êý¾Ý
+  337   1      
+  338   1      }
+  339          
+  340          void Control(void)
+  341          {
+  342   1        switch(Position)  //×´Ì¬»ú
+  343   1        {
+  344   2          case Normal:
+  345   2          {
+  346   3            Normal_handle();
+  347   3            break;
+  348   3          }
+  349   2          case Fork_R:
+  350   2          {
+  351   3            Fork_Rhandle();
+  352   3            break;
+  353   3          }
+  354   2          case Fork_L:
+  355   2          {
+  356   3            Fork_Lhandle();
+  357   3            break;
+  358   3          }
+  359   2          case Round_L:
+  360   2          {
+  361   3            Round_Lhandle();
+  362   3            break;
+  363   3          }
+  364   2          case Round_R:
+  365   2          {
+  366   3            Round_Rhandle();
+  367   3            break;
+  368   3          }
+  369   2          case Cross:
+  370   2          {
+  371   3            Cross_handle();
+  372   3            break;
+  373   3          }
+  374   2          case Descent:
+  375   2          {
+  376   3            Descent_handle();
+  377   3            break;
+  378   3          }
+  379   2          default : 
+  380   2          {
+  381   3            Position = Normal;
+  382   3            break;
+  383   3          }
+  384   2        }
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 7   
+
+  385   1      }
+  386          void Normal_handle(void)//Õý³£Ñ²Ïß´¦Àí
+  387          {
+  388   1        //pid±Õ»·¿ØÖÆ¶æ»ú
+  389   1          if(dig1<15 && dig1>-15)
+  390   1          {
+  391   2            ServoDuty = Servo_Middle + (-dig1)*0.5;
+  392   2          }
+  393   1          else  pid_duoji();
+  394   1          if(AD[3]<=20)//¶ªÏß´¦Àí
+  395   1          {
+  396   2            ServoDuty = Servo_Middle + (-dig3)*4.0;
+  397   2          }
+  398   1      }
+  399          
+  400          void Round_Rhandle(void) // ÓÒ»·´¦Àí
+  401          {
+  402   1        switch(Round_Process)
+  403   1        {
+  404   2          case Round_In:
+  405   2          {
+  406   3            ServoDuty = Servo_Middle ;
+  407   3            if(AD[0]>=80)//¼´½«½ø»·
+  408   3            {
+  409   4              Round_Process = Rounding;
+  410   4              ServoDuty = Servo_Middle - 35;
+  411   4            }
+  412   3            break;
+  413   3          }
+  414   2          case Rounding:
+  415   2          {
+  416   3            //ÓÒ»·Ñ­¼£
+  417   3            ServoDuty = Servo_Middle + (-dig3)*1.3;
+  418   3            if(AD[1]<=60 && AD[2]<=60 && AD[3]>=60)//ÅÐ¶Ï³ö»·
+  419   3            {
+  420   4              Round_Process = Round_Out ;
+  421   4            }
+  422   3            break;
+  423   3          }
+  424   2          case Round_Out:
+  425   2          {
+  426   3            ServoDuty = Servo_Middle + 35;
+  427   3            Position = Normal;
+  428   3            break;
+  429   3          }
+  430   2        }
+  431   1      }
+  432          void Round_Lhandle(void) // ×ó»·´¦Àí
+  433          {
+  434   1        switch(Round_Process)
+  435   1        {
+  436   2          case Round_In:
+  437   2          {
+  438   3            ServoDuty = Servo_Middle ;
+  439   3            if(AD[6]>=80)//¼´½«½ø»·
+  440   3            {
+  441   4              Round_Process = Rounding;
+  442   4              ServoDuty = Servo_Middle + 35;
+  443   4            }
+  444   3            break;
+  445   3          }
+  446   2          case Rounding:
+  447   2          {
+  448   3            //×ó»·Ñ­¼£
+  449   3            ServoDuty = Servo_Middle + (-dig3)*1.3;//ÐèÒªÔÙ¸Ä
+  450   3            if(AD[6]<=60 && AD[5]<=60 &&AD[3]>=60) //ÅÐ¶Ï³ö»· ±£Ö¤²»ÊÇÒòÎª¶ªÏßÔì³ÉµÄ
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 8   
+
+  451   3            {
+  452   4              Round_Process = Round_Out ;
+  453   4            }
+  454   3            break;
+  455   3          }
+  456   2          case Round_Out:
+  457   2          {
+  458   3            ServoDuty = Servo_Middle -35;
+  459   3            Position = Normal;
+  460   3            break;
+  461   3          }
+  462   2        }
+  463   1      }
+  464          
+  465          void Fork_Rhandle(void)
+  466          {
+  467   1        switch(Fork_Process)
+  468   1        {
+  469   2          case Fork_In:
+  470   2          {
+  471   3            ServoDuty = Servo_Middle - 70;
+  472   3            if(AD[6]>=45 &&AD[5]>=45 && AD[0]<=20 && AD[1]<=20)//ÅÐ¶ÏÊÇ·ñÔÚ²íÂ·ÖÐ
+  473   3            {
+  474   4              Fork_Process = Forking;
+  475   4            }
+  476   3            break;
+  477   3          }
+  478   2          case Forking:
+  479   2          {
+  480   3            //ÓÒ²íÂ·Ñ­¼£
+  481   3            ServoDuty = Servo_Middle + (-dig3)*0.8;
+  482   3            if(AD[1]>=85) //ÅÐ¶Ï³ö¿Ú 
+  483   3            {
+  484   4              Fork_Process = Forkout; 
+  485   4              count=0;
+  486   4            }
+  487   3            break;
+  488   3          }
+  489   2          case Forkout:
+  490   2          {
+  491   3            Position = Normal;
+  492   3            break;
+  493   3          }
+  494   2        }
+  495   1      }
+  496          void Fork_Lhandle(void)
+  497          {
+  498   1        switch(Fork_Process)
+  499   1        {
+  500   2          case Fork_In:
+  501   2          {
+  502   3            ServoDuty = Servo_Middle + 70;
+  503   3            if(AD[0]>=45&&AD[1]>=45&&AD[5]<=20&&AD[6]<=20)//ÅÐ¶ÏÊÇ·ñÔÚ²íÂ·ÖÐ
+  504   3            {
+  505   4              Fork_Process = Forking ;
+  506   4            }
+  507   3            break;
+  508   3          }
+  509   2          case Forking:
+  510   2          {
+  511   3            //×ó²íÂ·Ñ­¼£
+  512   3            ServoDuty = Servo_Middle + (-dig3)*0.8;
+  513   3            if(AD[5]>=85)  //ÅÐ¶Ï³ö¿Ú
+  514   3            {  
+  515   4              Fork_Process = Forkout;
+  516   4              count = 1;
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 9   
+
+  517   4            }
+  518   3            break;
+  519   3          }
+  520   2          case Forkout:
+  521   2          {
+  522   3            Position = Normal;
+  523   3            break;
+  524   3          }
+  525   2        }
+  526   1      }
+  527          
+  528          void Cross_handle(void)
+  529          {
+  530   1        switch(Cross_Process)
+  531   1        {
+  532   2          case Crossing:
+  533   2          {
+  534   3            //Ö±×ß
+  535   3            ServoDuty=Servo_Middle;
+  536   3            if(AD[0]<20 || AD[6] <20)
+  537   3            {
+  538   4              Cross_Process = Crossover;
+  539   4            }
+  540   3            break;
+  541   3          }
+  542   2          case Crossover:
+  543   2          {
+  544   3            Position = Normal;
+  545   3            break;
+  546   3          }
+  547   2        }
+  548   1      }
+  549          void Descent_handle(void)
+  550          {
+  551   1        switch(Descent_Process)
+  552   1        {
+  553   2          case Descenting:
+  554   2          {
+  555   3            jiashu_flag = 1;
+  556   3            //ServoDuty = Servo_Middle+ (-dig1)*0.6;//ÆÂµÀÑ­¼£
+  557   3            if(AD[3]<85)
+  558   3            {
+  559   4              Descent_Process = Descentover;
+  560   4            }
+  561   3            break;
+  562   3          }
+  563   2          case Descentover:
+  564   2          {
+  565   3            jiashu_flag = 0;
+  566   3            Position = Normal;
+  567   3            break;
+  568   3          }
+  569   2        }
+  570   1      }
+  571          void TFTLCD_show(void)
+  572          {
+  573   1        char txt[30];
+  574   1      //  sprintf((char*)txt,"Yaw:%.1f %.1f     ",yaw,icm_acc_z); // ÏÔÊ¾½Ç¶È
+  575   1      //  lcd_showstr_simspi(0,0,(char*)txt);
+  576   1      //  switch(Position)
+  577   1      //  {
+  578   1      //      case Normal:
+  579   1      //      {
+  580   1      //        sprintf(txt,"Position: Normal ");
+  581   1      //        break;
+  582   1      //      }
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 10  
+
+  583   1      //      case Round_R:
+  584   1      //      {
+  585   1      //        sprintf(txt,"Position: Round_R ");    //ÈüµÀÔªËØ
+  586   1      //        break;
+  587   1      //      }
+  588   1      //      case Round_L:
+  589   1      //      {
+  590   1      //        sprintf(txt,"Position: Round_L ");    //ÈüµÀÔªËØ
+  591   1      //        break;
+  592   1      //      }
+  593   1      //      case Fork_L:
+  594   1      //      {
+  595   1      //        sprintf(txt,"Position: Fork_L "); 
+  596   1      //        break;
+  597   1      //      }
+  598   1      //      case Fork_R:
+  599   1      //      {
+  600   1      //        sprintf(txt,"Position: Fork_R "); 
+  601   1      //        break;
+  602   1      //      }
+  603   1      //      case Cross:
+  604   1      //      {
+  605   1      //        sprintf(txt,"Position: Cross ");  
+  606   1      //        break;
+  607   1      //      }
+  608   1      //      case Descent:
+  609   1      //      {
+  610   1      //        sprintf(txt,"Position: Descent ");  
+  611   1      //        break;
+  612   1      //      }
+  613   1      //  }
+  614   1        sprintf(txt,"P:%.2f I:%.2f %.2f    ",Velocity_KP_L,Velocity_KI_L,Velocity_KD_L);  //ÏÔÊ¾kpkiµÄÖµ
+  615   1        lcd_showstr_simspi(0,1,(char*)txt);
+  616   1      //  sprintf(txt,"L:%03d R:%03d L:%d      ",PulseL,PulseR,PulseLL);  //ÏÔÊ¾±àÂëÆ÷µÄÖµ
+  617   1      //  lcd_showstr_simspi(0,2,(char*)txt);
+  618   1      //  sprintf(txt,"L:%03d R:%03d S:%.2f    ",MotorDutyL,MotorDutyR,f_duoji);  //ÏÔÊ¾µç»úpwmµÄÖµ
+  619   1      //  lcd_showstr_simspi(0,3,(char*)txt);
+  620   1      //  sprintf(txt,"T:%.2f %d %d %d       ",f_tanA,AD_V[6],AD_V[5],AD_V[4]); // ÏÔÊ¾¶æ»úµÄ½Ç¶È
+  621   1      //  lcd_showstr_simspi(0,4,(char*)txt);
+  622   1      //  sprintf((char*)txt,"%d %d %d %d       ",AD_V[3],AD_V[2],AD_V[1],AD_V[0]); // ÏÔÊ¾µç¸ÐµÄÖµ
+  623   1      //  lcd_showstr_simspi(0,5,(char*)txt);
+  624   1      //  sprintf(txt,"%02d %02d %02d %02d %02d %02d %02d   ",AD[6],AD[5],AD[4],AD[3],AD[2],AD[1],AD[0]); // ÏÔÊ
+             -¾µç¸Ð¹éÒ»»¯µÄÖµ
+  625   1      //  lcd_showstr_simspi(0,6,(char*)txt);
+  626   1      }
+  627          void Send_Message(void)
+  628          {
+  629   1        switch(Position)
+  630   1        {
+  631   2            case Round_R:
+  632   2            {
+  633   3              bluetooth_ch9141_send_buff("Round_R\r\n",8);
+  634   3              break;
+  635   3            }
+  636   2            case Round_L:
+  637   2            {
+  638   3              bluetooth_ch9141_send_buff("Round_L\r\n",8);
+  639   3              break;
+  640   3            }
+  641   2            case Fork_L:
+  642   2            {
+  643   3              bluetooth_ch9141_send_buff("Fork_L\r\n",7);
+  644   3              break;
+  645   3            }
+  646   2            case Fork_R:
+  647   2            {
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 11  
+
+  648   3              bluetooth_ch9141_send_buff("Fork_R\r\n",7);
+  649   3              break;
+  650   3            }
+  651   2            case Cross:
+  652   2            {
+  653   3              bluetooth_ch9141_send_buff("Cross\r\n",6);
+  654   3              break;
+  655   3            }
+  656   2            case Descent:
+  657   2            {
+  658   3              bluetooth_ch9141_send_buff("Descent\r\n",8);
+  659   3              break;
+  660   3            }
+  661   2        }
+  662   1      }
+  663          float duojikp = 0.7;
+  664          float duojikd = 1.1;
+  665          void pid_duoji()
+  666          {
+  667   1        static int16 error = 0;
+  668   1        static int16 last_error = 0;
+  669   1        duojikp = Fuzzy_Update(&Duoji_P,error,last_error-error);
+  670   1        ServoDuty = Servo_Middle - duojikp * error - duojikd * (last_error-error);
+  671   1        last_error = error;
+  672   1        error = dig3;
+  673   1      }
+  674          //void  INT0_Isr()  interrupt 0;
+  675          //void  TM0_Isr()   interrupt 1;
+  676          //void  INT1_Isr()  interrupt 2;
+  677          //void  TM1_Isr()   interrupt 3;
+  678          //void  UART1_Isr() interrupt 4;
+  679          //void  ADC_Isr()   interrupt 5;
+  680          //void  LVD_Isr()   interrupt 6;
+  681          //void  PCA_Isr()   interrupt 7;
+  682          //void  UART2_Isr() interrupt 8;
+  683          //void  SPI_Isr()   interrupt 9;
+  684          //void  INT2_Isr()  interrupt 10;
+  685          //void  INT3_Isr()  interrupt 11;
+  686          //void  TM2_Isr()   interrupt 12;
+  687          //void  INT4_Isr()  interrupt 16;
+  688          //void  UART3_Isr() interrupt 17;
+  689          //void  UART4_Isr() interrupt 18;
+  690          //void  TM3_Isr()   interrupt 19;
+  691          //void  TM4_Isr()   interrupt 20;
+  692          //void  CMP_Isr()   interrupt 21;
+  693          //void  I2C_Isr()   interrupt 24;
+  694          //void  USB_Isr()   interrupt 25;
+  695          //void  PWM1_Isr()  interrupt 26;
+  696          //void  PWM2_Isr()  interrupt 27;
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =      2406     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =       147        114
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+C251 COMPILER V5.60.0,  isr                                                                05/06/22  22:22:51  PAGE 12  
+
+  const size           =    ------     ------
+  hconst size          =       239     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

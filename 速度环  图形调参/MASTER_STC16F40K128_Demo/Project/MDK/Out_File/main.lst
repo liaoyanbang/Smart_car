@@ -1,0 +1,178 @@
+C251 COMPILER V5.60.0,  main                                                               05/06/22  22:30:47  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE main
+OBJECT MODULE PLACED IN .\Out_File\main.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\USER\src\main.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\..\Li
+                    -braries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\src
+                    -;.\Out_File) DEBUG PRINT(.\Out_File\main.lst) TABS(2) OBJECT(.\Out_File\main.obj) 
+
+stmt  level    source
+
+    1          /********************************************************************************************************
+             -*************
+    2           * COPYRIGHT NOTICE
+    3           * Copyright (c) 2020,Öð·É¿Æ¼¼
+    4           * All rights reserved.
+    5           * ¼¼ÊõÌÖÂÛQQÈº£ºÒ»Èº£º179029047(ÒÑÂú)  ¶þÈº£º244861897(ÒÑÂú)  ÈýÈº£º824575535
+    6           *
+    7           * ÒÔÏÂËùÓÐÄÚÈÝ°æÈ¨¾ùÊôÖð·É¿Æ¼¼ËùÓÐ£¬Î´¾­ÔÊÐí²»µÃÓÃÓÚÉÌÒµÓÃÍ¾£¬
+    8           * »¶Ó­¸÷Î»Ê¹ÓÃ²¢´«²¥±¾³ÌÐò£¬ÐÞ¸ÄÄÚÈÝÊ±±ØÐë±£ÁôÖð·É¿Æ¼¼µÄ°æÈ¨ÉùÃ÷¡£
+    9           *
+   10           * @file          main
+   11           * @company       ³É¶¼Öð·É¿Æ¼¼ÓÐÏÞ¹«Ë¾
+   12           * @author        Öð·É¿Æ¼¼(QQ790875685)
+   13           * @version       ²é¿´docÄÚversionÎÄ¼þ °æ±¾ËµÃ÷
+   14           * @Software    MDK FOR C251 V5.60
+   15           * @Target core   STC16F40K128
+   16           * @Taobao      https://seekfree.taobao.com/
+   17           * @date          2020-12-18
+   18           ********************************************************************************************************
+             -************/
+   19          
+   20          #include "headfile.h"
+   21          
+   22          
+   23          /*
+   24           *¹ØÓÚÄÚºËÆµÂÊµÄÉè¶¨£¬¿ÉÒÔ²é¿´board.hÎÄ¼þ
+   25           *ÔÚboard_initÖÐ,ÒÑ¾­½«P54Òý½ÅÉèÖÃÎª¸´Î»
+   26           *Èç¹ûÐèÒªÊ¹ÓÃP54Òý½Å,¿ÉÒÔÔÚboard.cÎÄ¼þÖÐµÄboard_init()º¯ÊýÖÐÉ¾³ýSET_P54_RESRT¼´¿É
+   27           */
+   28          
+   29          
+   30          //=======À¶ÑÀµÆ¹âËµÃ÷=========
+   31          //1£¬À¶µÆÉÁË¸±íÊ¾±íÊ¾µ±Ç°Îª´Ó»úÄ£Ê½²¢ÇÒÎ´Á¬½Ó
+   32          //2£¬À¶µÆ²»ÁÁ±íÊ¾µ±Ç°ÎªÖ÷»úÄ£Ê½²¢ÇÒÎ´Á¬½Ó
+   33          //3£¬À¶µÆ³£ÁÁ±íÊ¾ÒÑÁ¬½Ó
+   34          //4£¬Èç¹ûÀ¶ÑÀÁ¬½Ó³É¹¦ÁË£¬½øÐÐÍ¸´«µÄÊ±ºòÀ¶µÆ»áÉÁË¸
+   35          
+   36          //=========Ö÷»ú³ÌÐò==========
+   37          //ÐèÒªÓë´Ó»ú³ÌÐòÅäÌ×²âÊÔ
+   38          //ÐèÒªÔÚ³õÊ¼»¯º¯Êý²ÎÊýÖÐÐ´Èë¶ÔÓ¦µØÖ·£¬Èç£ºbluetooth_ch9141_init(MASTER_MODE£¬"80:90:2C:E4:C2:84,000000");
+   39          //²é¿´Ä£¿éµØÖ··½Ê½
+   40          //1.Ê¹ÓÃÔÚÏßµ÷ÊÔ  £¨Ö÷»ú»ò´Ó»ú·½Ê½¶¼ÄÜ²é¿´£©
+   41          //  ³õÊ¼»¯ÖÐbluetooth_ch9141_get_mac_address()º¯ÊýÏÂÒ»Óï¾ä¼Ó¸ö¶Ïµã£¬ÔËÐÐµ½¶Ïµãºó²é¿´mac_addressÊý×é£¬µÃµ½µ
+             -Ä17Î»×Ö·û¼´ÎªµØÖ·
+   42          //2. Ê¹ÓÃÊÖ»ú  £¨ÏÂÔØ´Ó»ú´úÂëºóÊ¹ÓÃ£©
+   43          //  ÉÏµçÔËÐÐºó£¬´ò¿ªÊÖ»úBLEµ÷ÊÔÈí¼þ£¬ÄÜËÑË÷µ½Ä£¿éµÄÃû×Ö£¬Ãû×ÖÏÂ·½±ãÊÇµØÖ·
+   44          //  Ä£¿éµÄÃû×ÖÎª³õÊ¼»¯ÖÐbluetooth_ch9141_set_nameº¯ÊýµÄ²ÎÊý
+   45          //  Èç¹ûÊ¹ÓÃÊÖ»ú²é¿´À¶ÑÀµÄmacµØÖ·£¬ÔòÊäÈëµÄÊ±ºòÇë½«macµ¹ÖÃÒ»ÏÂ
+   46          //  ÀýÈçÊÖ»ú²é¿´µ½µÄmacµØÖ·Îª61:62:63:64:65:67£¬ÔòÊ¹ÓÃ±¾º¯ÊýÁ¬½ÓµÄÊ±ºòÓ¦¸ÃÐ´
+   47          //bluetooth_ch9141_init(MASTER_MODE£¬"67:65:64:63:62:61,000000");
+   48          //µØÖ·ÌîÐ´Íê³ÉºóÔËÐÐ´úÂë£¬Èç¹û´Ó»úÔËÐÐÖÐ£¬Ö÷»ú»á×Ô¶¯Á¬½Ó´Ó»ú
+   49          
+   50          //£¡£¡ÔËÐÐÐ§¹û£º
+   51          //Ö÷»ú³ÖÐø·¢ËÍÊý¾Ý£¬´Ó»ú½ÓÊÕµ½Êý¾Ýºó»á½«Êý¾Ý·¢ËÍ»ØÀ´£¬Ö÷»ú½ÓÊÕµ½´Ó»ú·µ»ØµÄÊý¾Ýºó½«Êý¾ÝÏÔÊ¾µ½ÆÁÄ»ÉÏ
+   52          uint8 test1[] = "1111111111\r\n";
+   53          uint8 test2[] = "222222222222\r\n";
+   54          uint8 send_value = 'a';
+C251 COMPILER V5.60.0,  main                                                               05/06/22  22:30:47  PAGE 2   
+
+   55          uint8 str[30];
+   56          void OLED_show(void);
+   57          #define LED P52
+   58          int main(void)
+   59          {
+   60   1          DisableGlobalIRQ();
+   61   1          board_init();   //Îñ±Ø±£Áô£¬±¾º¯ÊýÓÃÓÚ³õÊ¼»¯MPU Ê±ÖÓ µ÷ÊÔ´®¿Ú
+   62   1        
+   63   1          lcd_init_simspi();//³õÊ¼»¯TFTÆÁ
+   64   1          
+   65   1          pit_timer_ms(TIM_1,20);//³õÊ¼»¯¶¨Ê±Æ÷1 5ms  Control ËÙ¶È»·
+   66   1      //    pit_timer_ms(TIM_2,100);//³õÊ¼»¯¶¨Ê±Æ÷1 5ms  Control ËÙ¶È»·
+   67   1      //    
+   68   1      //    exit_init(INT0_P32, FALLING_EDGE);    //ÏÂ½µÑØ´¥·¢INT0_P32ÖÐ¶Ï  KEY1
+   69   1      //    exit_init(INT1_P33, FALLING_EDGE);    //ÏÂ½µÑØ´¥·¢INT1_P33ÖÐ¶Ï  KEY2
+   70   1      //    exit_init(INT2_P36, FALLING_EDGE);    //ÏÂ½µÑØ´¥·¢INT2_P36ÖÐ¶Ï  KEY3
+   71   1      //    exit_init(INT3_P37, FALLING_EDGE);    //ÏÂ½µÑØ´¥·¢INT3_P37ÖÐ¶Ï  KEY4
+   72   1        
+   73   1          pwm_init(PWMA_CH2P_P62,10000,0);//³õÊ¼»¯×óµç»ú
+   74   1          pwm_init(PWMA_CH1P_P60,10000,0);//³õÊ¼»¯ÓÒµç»ú
+   75   1          
+   76   1          ctimer_count_init(CTIM0_P34);//±àÂëÆ÷1³õÊ¼»¯
+   77   1          ctimer_count_init(CTIM3_P04);//±àÂëÆ÷2³õÊ¼»¯
+   78   1          
+   79   1        
+   80   1        
+   81   1        
+   82   1          //ÉÏÎ»»úÅäÖÃ
+   83   1          uart_init(UART_1, UART1_RX_P30, UART1_TX_P31, 115200, TIM_2); 
+   84   1          delay_ms(300);  //ÑÓÊ±300ms£¬µÈ´ýÖ÷°åÆäËûÍâÉèÉÏµç³É¹¦
+   85   1          EnableGlobalIRQ();
+   86   1          flag_star = 1;
+   87   1          while(1)
+   88   1          {
+   89   2            ANO_DT_SendtoUSER(PulseL,GoalPulseL,PulseR,GoalPulseR);
+   90   2            //delay_ms(20);
+   91   2            TFTLCD_show();
+   92   2            if(P32 == 0)
+   93   2            {
+   94   3              delay_ms(10);
+   95   3              if(P32 == 0)
+   96   3              {
+   97   4                while(P32);
+   98   4                Velocity_KI_L +=0.1;
+   99   4              }
+  100   3            }
+  101   2            else if(P33 == 0)
+  102   2            {
+  103   3              delay_ms(10);
+  104   3              if(P33 == 0)
+  105   3              {
+  106   4                while(P33);
+  107   4                LED = !LED; //·´×ªLED
+  108   4                //k=at24c02_read_byte(AT24C02_DEV_ADDR);
+  109   4                Velocity_KI_L -=0.1;
+  110   4              }
+  111   3            }
+  112   2            else if(P45 == 0)
+  113   2            {
+  114   3              delay_ms(10);
+  115   3              if(P45 == 0)
+  116   3              {
+  117   4                while(P45);
+  118   4                LED = !LED; //·´×ªLED
+  119   4                Velocity_KP_L +=0.1;
+  120   4              }
+C251 COMPILER V5.60.0,  main                                                               05/06/22  22:30:47  PAGE 3   
+
+  121   3            }
+  122   2            else if(P46 == 0)
+  123   2            {
+  124   3              delay_ms(10);
+  125   3              if(P46 == 0)
+  126   3              {
+  127   4                while(P46);
+  128   4                LED = !LED; //·´×ªLED
+  129   4                Velocity_KP_L -=0.1;
+  130   4              }
+  131   3            }
+  132   2            
+  133   2            
+  134   2          }
+  135   1      }
+  136          
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       334     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =        59     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        41     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

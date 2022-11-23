@@ -1,0 +1,280 @@
+C251 COMPILER V5.60.0,  Fuzzy_pid                                                          16/03/22  15:38:05  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE Fuzzy_pid
+OBJECT MODULE PLACED IN .\Out_File\Fuzzy_pid.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\USER\src\Fuzzy_pid.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\
+                    -..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USE
+                    -R\src;.\Out_File) DEBUG PRINT(.\Out_File\Fuzzy_pid.lst) TABS(2) OBJECT(.\Out_File\Fuzzy_pid.obj) 
+
+stmt  level    source
+
+    1          #include "Fuzzy_pid.h" 
+    2          
+    3          
+    4          FuzzyStruct Duoji_P = 
+    5            { Fuzzy_Rank7, 0,0,{ -100, -60, -30, 0, 30, 60, 100 },//∆´≤Ó 
+    6            { -10, -8, -5, 0, 5, 8, 10 },// ∆´≤Ó±‰ªØ¬  
+    7            { 0.5, 0.6, 0.7, 0.8,0.9,1.0, 1.1 },//∂Êª˙P÷µ 
+    8            { { 6, 6, 6, 5, 5, 5, 5, }, // -3
+    9            { 5, 4, 4, 3, 2, 2, 1, }, // -2
+   10            { 4, 3, 2, 1, 0, 1, 2, }, // -1
+   11            { 4, 3, 1, 0, 1, 3, 4, }, // 0
+   12            { 2, 1, 0, 1, 2, 3, 4, }, // 1 
+   13            { 1, 2, 2, 3, 4, 4, 5, }, // 2 
+   14            { 5, 5, 5, 5, 6, 6, 6, }, // 3 
+   15              } };
+   16          /***************
+   17          *****************************************
+   18          ************** * 
+   19          ∫Ø ˝√˚≥∆£∫FuzzyCtrl * 
+   20          ∫Ø ˝π¶ƒ‹£∫ƒ£∫˝ªØ »•ƒ£∫˝ * 
+   21          »Îø⁄≤Œ ˝£∫FuzzyStruct* Fuzzy_S * 
+   22          ≥ˆø⁄≤Œ ˝£∫Fuzzy Value ******************
+   23          ****************************************************/
+   24          float FuzzyCtrl(FuzzyStruct* Fuzzy_S) 
+   25          { 
+   26   1        float eFuzzy[2] = { 0.0, 0.0 };//∆´≤Ó¡• Ù∂»÷µ 
+   27   1        float ecFuzzy[2] = { 0.0, 0.0 };//∆´≤ÓŒ¢∑÷ 
+   28   1        float QRule[4] = { 0.0, 0.0, 0.0, 0.0 }; //URule[] ‰≥ˆ÷µ 
+   29   1        float U1Fuzzy[4] = { 0.0, 0.0, 0.0, 0.0 }; // ‰≥ˆ÷µµƒ¡• Ù∂» 
+   30   1        int pe = 0, pec = 0, U1Rule[4] = { 0, 0, 0, 0 };//∆´≤Ó ∆´≤Óµƒ±‰ªØ¬  ≤…”√µƒÀƒ ÃıπÊ‘Ú 
+   31   1        float U = 0;// ‰≥ˆ÷µµƒæ´»∑¡ø
+   32   1        int rank;//¡• Ù∂»º∂±
+   33   1        float temp1, temp2;//÷ÿ–ƒ∑®÷–º‰±‰¡ø
+   34   1        rank = Fuzzy_S->Rank; 
+   35   1        /*----------------------------------------ƒ£∫˝”Ô—‘√Ë ˆ ------------------------------------------*/ 
+   36   1        switch (rank) 
+   37   1        {
+   38   2          case 7: { 
+   39   3            /*-----ŒÛ≤Ó¡• Ù∫Ø ˝√Ë ˆ-----*/ 
+   40   3            if (Fuzzy_S->fe <= Fuzzy_S->eRule[0]) // |x_x_x_x_x_x_x_
+   41   3            { 
+   42   4              eFuzzy[0] = 1.0;
+   43   4              pe = -2; 
+   44   4            }
+   45   3            else if (Fuzzy_S->fe <= Fuzzy_S->eRule[1]) // _x|x_x_x_x_x_x_
+   46   3            {
+   47   4              eFuzzy[0] = (Fuzzy_S->eRule[1] - Fuzzy_S->fe) / (Fuzzy_S->eRule[1] - Fuzzy_S->eRule[0]);//±∆Ω¸≥Ã∂»√Ë 
+             -ˆ πÈ“ªªØ¥¶¿Ì 
+   48   4              pe = -2; 
+   49   4            }
+   50   3            else if (Fuzzy_S->fe <= Fuzzy_S->eRule[2]) // _x_x|x_x_x_x_x_ 
+   51   3            { 
+   52   4              eFuzzy[0] = (Fuzzy_S->eRule[2] - Fuzzy_S->fe) / (Fuzzy_S->eRule[2] - Fuzzy_S->eRule[1]);
+   53   4              pe = -1;
+   54   4            }else if (Fuzzy_S->fe <= Fuzzy_S->eRule[3]) // _x_x_x|x_x_x_x_ 
+   55   3            { 
+   56   4              eFuzzy[0] = (Fuzzy_S->eRule[3] - Fuzzy_S->fe) / (Fuzzy_S->eRule[3] - Fuzzy_S->eRule[2]); 
+C251 COMPILER V5.60.0,  Fuzzy_pid                                                          16/03/22  15:38:05  PAGE 2   
+
+   57   4              pe = 0; 
+   58   4            }
+   59   3            else if (Fuzzy_S->fe <= Fuzzy_S->eRule[4]) // _x_x_x_x|x_x_x_ 
+   60   3            { 
+   61   4              eFuzzy[0] = (Fuzzy_S->eRule[4] - Fuzzy_S->fe) / (Fuzzy_S->eRule[4] - Fuzzy_S->eRule[3]); 
+   62   4              pe = 1; 
+   63   4            }
+   64   3            else if (Fuzzy_S->fe <= Fuzzy_S->eRule[5]) // _x_x_x_x_x|x_x_ 
+   65   3            { 
+   66   4              eFuzzy[0] = (Fuzzy_S->eRule[5] - Fuzzy_S->fe) / (Fuzzy_S->eRule[5] - Fuzzy_S->eRule[4]); 
+   67   4              pe = 2; 
+   68   4            }
+   69   3            else if (Fuzzy_S->fe <= Fuzzy_S->eRule[6]) // _x_x_x_x_x_x|x_ 
+   70   3            { 
+   71   4              eFuzzy[0] = (Fuzzy_S->eRule[6] - Fuzzy_S->fe) / (Fuzzy_S->eRule[6] - Fuzzy_S->eRule[5]);
+   72   4              pe = 3; 
+   73   4            }
+   74   3            else if (Fuzzy_S->fe >= Fuzzy_S->eRule[6]) // _x_x_x_x_x_x_x| 
+   75   3            {
+   76   4              eFuzzy[0] = 0; 
+   77   4              pe = 3; 
+   78   4            }
+   79   3            eFuzzy[1] = 1 - eFuzzy[0]; 
+   80   3      /*-----ŒÛ≤Ó±‰ªØ¬ ¡• Ù∫Ø ˝√Ë ˆ-----*/ 
+   81   3            if (Fuzzy_S->fec <= Fuzzy_S->ecRule[0]) 
+   82   3            { 
+   83   4              ecFuzzy[0] = 1.0; 
+   84   4              pec = -2; 
+   85   4            }
+   86   3            else if (Fuzzy_S->fec <= Fuzzy_S->ecRule[1]) 
+   87   3            {
+   88   4              ecFuzzy[0] = (Fuzzy_S->ecRule[1] - Fuzzy_S->fec) / (Fuzzy_S->ecRule[1] - Fuzzy_S->ecRule[0]); 
+   89   4              pec = -2; 
+   90   4            }
+   91   3            else if (Fuzzy_S->fec <= Fuzzy_S->ecRule[2]) 
+   92   3            {
+   93   4              ecFuzzy[0] = (Fuzzy_S->ecRule[2] - Fuzzy_S->fec) / (Fuzzy_S->ecRule[2] - Fuzzy_S->ecRule[1]);
+   94   4              pec = -1; 
+   95   4            }
+   96   3            else if (Fuzzy_S->fec <= Fuzzy_S->ecRule[3]) 
+   97   3            { 
+   98   4              ecFuzzy[0] = (Fuzzy_S->ecRule[3] - Fuzzy_S->fec) / (Fuzzy_S->ecRule[3] - Fuzzy_S->ecRule[2]);
+   99   4              pec = 0; 
+  100   4            }
+  101   3            else if (Fuzzy_S->fec <= Fuzzy_S->ecRule[4]) 
+  102   3            { 
+  103   4              ecFuzzy[0] = (Fuzzy_S->ecRule[4] - Fuzzy_S->fec) / (Fuzzy_S->ecRule[4] - Fuzzy_S->ecRule[3]); 
+  104   4              pec = 1;
+  105   4            }
+  106   3            else if (Fuzzy_S->fec <= Fuzzy_S->ecRule[5]) 
+  107   3            { 
+  108   4              ecFuzzy[0] = (Fuzzy_S->ecRule[5] - Fuzzy_S->fec) / (Fuzzy_S->ecRule[5] - Fuzzy_S->ecRule[4]);
+  109   4              pec = 2;
+  110   4            }
+  111   3            else if 
+  112   3            (Fuzzy_S->fec <= Fuzzy_S->ecRule[6]) 
+  113   3            {
+  114   4              ecFuzzy[0] = (Fuzzy_S->ecRule[6] - Fuzzy_S->fec) / (Fuzzy_S->ecRule[6] - Fuzzy_S->ecRule[5]); 
+  115   4              pec = 3;
+  116   4            }
+  117   3            else 
+  118   3            { 
+  119   4              ecFuzzy[0] = 0;
+  120   4              pec = 3;
+  121   4            }
+  122   3          ecFuzzy[1] = 1 - ecFuzzy[0]; break; }//...7º∂¡• Ù∂»
+C251 COMPILER V5.60.0,  Fuzzy_pid                                                          16/03/22  15:38:05  PAGE 3   
+
+  123   2          default: break; }//¡• Ù∂»√Ë ˆÕÍ≥…
+  124   1        
+  125   1          /*****************************************************************/ 
+  126   1          /*≤È—Øƒ£∫˝πÊ‘Ú±Ì rule[][]*/ 
+  127   1          /*÷––ƒ÷µ”…URule[] ‰≥ˆ*/ 
+  128   1          /*“ª∞„∂º «Àƒ∏ˆπÊ‘Ú”––ß*/
+  129   1          U1Rule[0] = Fuzzy_S->rule[pe - 1 + 3][pec - 1 + 3];
+  130   1          U1Rule[1] = Fuzzy_S->rule[pe + 3][pec - 1 + 3];
+  131   1          U1Rule[2] = Fuzzy_S->rule[pe - 1 + 3][pec + 3]; 
+  132   1          U1Rule[3] = Fuzzy_S->rule[pe + 3][pec + 3]; //œ‡Ω¸¡• Ù∂» 
+  133   1          if (eFuzzy[0] <= ecFuzzy[0]) // 0-0 
+  134   1            U1Fuzzy[0] = eFuzzy[0];
+  135   1          else U1Fuzzy[0] = ecFuzzy[0];
+  136   1          if (eFuzzy[1] <= ecFuzzy[0]) // 1-0 
+  137   1            U1Fuzzy[1] = eFuzzy[1]; 
+  138   1          else U1Fuzzy[1] = ecFuzzy[0]; 
+  139   1          if (eFuzzy[0] <= ecFuzzy[1]) // 0-1 
+  140   1            U1Fuzzy[2] = eFuzzy[0]; 
+  141   1          else U1Fuzzy[2] = ecFuzzy[1];
+  142   1          if (eFuzzy[1] <= ecFuzzy[1]) // 1-1 
+  143   1            U1Fuzzy[3] = eFuzzy[1]; 
+  144   1          else U1Fuzzy[3] = ecFuzzy[1];
+  145   1          /*Õ¨¡• Ù∫Ø ˝ ‰≥ˆ”Ô—‘÷µ«Û¥Û*/ 
+  146   1          if (U1Rule[0] == U1Rule[1]) 
+  147   1          { 
+  148   2            if (U1Fuzzy[0] > U1Fuzzy[1]) 
+  149   2            U1Fuzzy[1] = 0; 
+  150   2            else U1Fuzzy[0] = 0; 
+  151   2          }
+  152   1          if (U1Rule[0] == U1Rule[2]) 
+  153   1          { 
+  154   2            if (U1Fuzzy[0] > U1Fuzzy[2]) 
+  155   2            U1Fuzzy[2] = 0; 
+  156   2            else U1Fuzzy[0] = 0; 
+  157   2          }
+  158   1          if (U1Rule[0] == U1Rule[3]) 
+  159   1          {
+  160   2            if (U1Fuzzy[0] > U1Fuzzy[3]) 
+  161   2              U1Fuzzy[3] = 0;
+  162   2            else U1Fuzzy[0] = 0; 
+  163   2          }
+  164   1          if (U1Rule[1] == U1Rule[2]) 
+  165   1          {
+  166   2            if (U1Fuzzy[1] > U1Fuzzy[2])
+  167   2              U1Fuzzy[2] = 0;
+  168   2            else U1Fuzzy[1] = 0; 
+  169   2          }
+  170   1          if (U1Rule[1] == U1Rule[3]) 
+  171   1          { 
+  172   2            if (U1Fuzzy[1] > U1Fuzzy[3])
+  173   2            U1Fuzzy[3] = 0; 
+  174   2            else U1Fuzzy[1] = 0; 
+  175   2          }
+  176   1          if (U1Rule[2] == U1Rule[3])
+  177   1          { 
+  178   2            if (U1Fuzzy[2] > U1Fuzzy[3]) 
+  179   2            U1Fuzzy[3] = 0;
+  180   2            else U1Fuzzy[2] = 0; 
+  181   2          }
+  182   1          
+  183   1          /*****************************************************************/ 
+  184   1          /*÷ÿ–ƒ∑®∑¥ƒ£∫˝*/ 
+  185   1          /*U1Rule[]‘≠÷µŒ™ ‰≥ˆ¡• Ù∫Ø ˝±Í∫≈£¨◊™ªªŒ™URule[]¡• Ù∫Ø ˝÷µ*/
+  186   1          if (U1Rule[0] >= 0) 
+  187   1            QRule[0] = Fuzzy_S->URule[U1Rule[0]]; 
+  188   1          else QRule[0] = -(Fuzzy_S->URule[-U1Rule[0]]); 
+C251 COMPILER V5.60.0,  Fuzzy_pid                                                          16/03/22  15:38:05  PAGE 4   
+
+  189   1          if (U1Rule[1] >= 0) 
+  190   1            QRule[1] = Fuzzy_S->URule[U1Rule[1]];
+  191   1          else QRule[1] = -(Fuzzy_S->URule[-U1Rule[1]]); 
+  192   1          if (U1Rule[2] >= 0) 
+  193   1            QRule[2] = Fuzzy_S->URule[U1Rule[2]]; 
+  194   1          else QRule[2] = -(Fuzzy_S->URule[-U1Rule[2]]); 
+  195   1          if (U1Rule[3] >= 0) 
+  196   1            QRule[3] = Fuzzy_S->URule[U1Rule[3]]; 
+  197   1          else QRule[3] = -(Fuzzy_S->URule[-U1Rule[3]]);
+  198   1          temp1 = U1Fuzzy[0] * QRule[0] + U1Fuzzy[1] * QRule[1] + U1Fuzzy[2] * QRule[2] + U1Fuzzy[3] * QRule[3]; 
+  199   1          temp2 = U1Fuzzy[0] + U1Fuzzy[1] + U1Fuzzy[2] + U1Fuzzy[3];
+  200   1          U = temp1 / temp2; 
+  201   1          return U; 
+  202   1      }
+  203          
+  204          /********************************************************************** 
+  205          * ∫Ø ˝√˚≥∆£∫Fuzzy_Update
+  206          * ∫Ø ˝π¶ƒ‹£∫ƒ£∫˝øÿ÷∆∏¸–¬ 
+  207          * »Îø⁄≤Œ ˝£∫FuzzyStruct* F_S ekekc 
+  208          * ≥ˆø⁄≤Œ ˝£∫Fuzzy Value 
+  209          **********************************************************************/
+  210          float Fuzzy_Update(FuzzyStruct* F_S, float ek, float ekc) 
+  211          { 
+  212   1        float value = 0;
+  213   1        F_S->fe = ek; 
+  214   1        F_S->fec = ekc; 
+  215   1        value = FuzzyCtrl(F_S); 
+  216   1        return value; 
+  217   1      }
+*** WARNING C183 IN LINE 31 OF ..\USER\src\Fuzzy_pid.c: dead assignment eliminated
+*** WARNING C184 IN LINE 79 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 133 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 133 OF ..\USER\src\Fuzzy_pid.c: value of 'ecFuzzy' possibly undefined
+*** WARNING C184 IN LINE 134 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 135 OF ..\USER\src\Fuzzy_pid.c: value of 'ecFuzzy' possibly undefined
+*** WARNING C184 IN LINE 136 OF ..\USER\src\Fuzzy_pid.c: value of 'ecFuzzy' possibly undefined
+*** WARNING C184 IN LINE 136 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 137 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 138 OF ..\USER\src\Fuzzy_pid.c: value of 'ecFuzzy' possibly undefined
+*** WARNING C184 IN LINE 139 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 139 OF ..\USER\src\Fuzzy_pid.c: value of 'ecFuzzy' possibly undefined
+*** WARNING C184 IN LINE 140 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 141 OF ..\USER\src\Fuzzy_pid.c: value of 'ecFuzzy' possibly undefined
+*** WARNING C184 IN LINE 142 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 142 OF ..\USER\src\Fuzzy_pid.c: value of 'ecFuzzy' possibly undefined
+*** WARNING C184 IN LINE 143 OF ..\USER\src\Fuzzy_pid.c: value of 'eFuzzy' possibly undefined
+*** WARNING C184 IN LINE 144 OF ..\USER\src\Fuzzy_pid.c: value of 'ecFuzzy' possibly undefined
+*** WARNING C183 IN LINE 212 OF ..\USER\src\Fuzzy_pid.c: dead assignment eliminated
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =      1589     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =       192         60
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+C251 COMPILER V5.60.0,  Fuzzy_pid                                                          16/03/22  15:38:05  PAGE 5   
+
+  hconst size          =       252     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  19 WARNING(S),  0 ERROR(S)

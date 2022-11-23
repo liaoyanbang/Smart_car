@@ -1,0 +1,149 @@
+C251 COMPILER V5.60.0,  main                                                               21/12/21  22:07:37  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE main
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE main.c LARGE INTR2 BROWSE INCDIR(.\user;.\user\Dianci) DEBUG PRINT(.\L
+                    -istings\main.lst) TABS(2) OBJECT(.\Objects\main.obj) 
+
+stmt  level    source
+
+    1          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+    2          【平    台】北京龙邱智能科技STC16核心板
+    3          【编    写】chiusir
+    4          【E-mail  】chiusir@163.com
+    5          【软件版本】V1.1 版权所有，单位使用请先联系授权
+    6          【最后更新】2021年1月23日
+    7          【相关信息参考下列地址】
+    8          【网    站】http://www.lqist.cn
+    9          【淘宝店铺】http://longqiu.taobao.com
+   10          ------------------------------------------------
+   11          【IDE】STC16
+   12          【Target 】 C251Keil5.6及以上
+   13          【SYS PLL】 30MHz使用内部晶振
+   14          =================================================================
+   15          STC16相关配套视频：
+   16          龙邱科技B站网址：https://space.bilibili.com/95313236
+   17          STC16环境下载参考视频： https://www.bilibili.com/video/BV1gy4y1p7T1/
+   18          STC16一体板子介绍视频： https://www.bilibili.com/video/BV1Jy4y1e7R4/
+   19          =================================================================
+   20          下载时, 选择时钟 30MHZ (用户可自行修改频率).
+   21          STC16F初次下载:先用IRCBND=0，ISP界面设置为24M，
+   22          芯片最后一行2038...然后IRCBND=0，下载频率为30M；
+   23          芯片最后一行2010...或者IRCBND=1，下载频率为30M；
+   24          官方出库批次不同，略有差异，好用为准！！！
+   25          =================================================================
+   26           【注意事项】注意，一定要对舵机打角进行限制
+   27           使用龙邱母板测试舵机流程：
+   28           1.先使用万用表测量电池电压，务必保证电池电压在7V以上，否则无力不反应！
+   29           2.然后确定舵机供电电压，SD5/SD012舵机用5V供电，S3010用6-7V供电！！！
+   30           3.把舵机的舵盘去掉，让舵机可以自由转动；
+   31           4.烧写程序并运行，让舵机转动到中值附近；如果没反应重复1-2步，或者调整舵机的PWM频率计占空比，能受控为准；
+   32           5.舵机受控后用手轻转，舵机会吱吱响，对抗转动，此时可以装上舵盘；
+   33           6.按键K0/K1确定舵机的左右转动极限，并记下来，作为后续限幅防止舵机堵转烧毁！
+   34          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   35          
+   36          #include "include.h"
+   37          
+   38          
+   39          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   40          【函数名】void main(void)  
+   41          【功  能】主函数
+   42          【参数值】无
+   43          【返回值】无 
+   44          【最后更新】2021年1月22日 
+   45          【软件版本】V1.0
+   46          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   47          void main(void)  
+   48          {   
+   49   1        sysinit();  
+   50   1       // UART1_config(1);            // 使用定时器2做串口4的波特率生成时钟
+   51   1        OLED_Init();                // OLED初始化
+   52   1       // OLED_CLS();                 // 清屏   
+   53   1        OLED_P14x16Str(0,2,(unsigned char*)"北京龙邱智能科技");   // 字符串显示
+   54   1        //OLED_P6x8Str(0,4,"Long Qiu i.s.t.");  // 字符串显示
+   55   1        delayms(200);
+   56   1        //Test_GPIO_LED();
+   57   1        GPIO_KEY_Init();            // 按键初始化
+   58   1        MotorInit(12500);
+C251 COMPILER V5.60.0,  main                                                               21/12/21  22:07:37  PAGE 2   
+
+   59   1        ServoInit(100);
+   60   1        ADC_Init();   // ADC初始化
+   61   1        Timer34EncInit();                           // 编码器接口初始化
+   62   1        Timer0_init();
+   63   1        Timer1_init();
+   64   1        OLED_CLS();     // 清屏   
+   65   1        
+   66   1        EnableInterrupts;                    // 允许中断
+   67   1        //Test_ComKEY_Tft();
+   68   1        //Test_ADC();
+   69   1        //TestMotor();
+   70   1        //TestServo();
+   71   1        //TestEncoder();
+   72   1        //ElectroMagneticCar();
+   73   1        while (1)
+   74   1        {   
+   75   2          //InductorNormal();
+   76   2          OLED_show();
+   77   2        }
+   78   1      }
+   79          
+   80          /*LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+   81          【函数名】void sysinit(void)  
+   82          【功  能】部分系统功能初始化
+   83          【参数值】无
+   84          【返回值】无 
+   85          【最后更新】2021年1月22日 
+   86          【软件版本】V1.0
+   87          QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ*/
+   88          void sysinit(void)  
+   89          { 
+   90   1        WTST = 0; 
+   91   1        P_SW2 |= 0x80;  
+   92   1        // 看单片机最下面一行的前5位，2010A，30M需要 IRCBAND=1; IRCBAND=0; 频率改变
+   93   1        // 看单片机最下面一行的前5位，2038A，30M需要 IRCBAND=0; 
+   94   1        IRCBAND=1;              // 1：35M频段；0：24M频段
+   95   1        //IRTRIM =0;            // 频率校正，用通过ISP校正
+   96   1        //LIRTRIM=0;            // 频率校正，用通过ISP校正
+   97   1        CLKDIV = 0;             // 分频设置
+   98   1        P_SW2 &= 0x7F;
+   99   1        RSTCFG|=1<<4;           // 使能P5.4复位管脚  
+  100   1        P0M1 =0x40; P0M0 = 0;   // 设置为准双向口,P0.6  0.7为输入口，编码器用
+  101   1        P0PU =0x40;             // P0.6  0.7使能内部4.1K上拉电阻
+  102   1        P1M1 = 0;   P1M0 = 0;   // 设置为准双向口
+  103   1        P3M1 = 0;   P3M0 = 0;   // 设置为准双向口
+  104   1        P4M1 = 0;   P4M0 = 0;   // 设置为准双向口
+  105   1        P5M1 = 0;   P5M0 = 0;   // 设置为准双向口
+  106   1        //P6M1 = 0;   P6M0 = 0; // 设置为准双向口，OLED用
+  107   1        //P7M1 =0xFF; P7M0 = 0; // 设置为准双向口，舵机和按键使用
+  108   1        P7PU =0xFF;             // 设置为准双向口,P7.0123为输入口接按键,P7.4567为输出口接电机驱动
+  109   1        P40 = 0;                // 打开LED电源 
+  110   1        EA=0;                   // 关闭总中断
+  111   1      }
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       147     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------     ------
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+C251 COMPILER V5.60.0,  main                                                               21/12/21  22:07:37  PAGE 3   
+
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =        17     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

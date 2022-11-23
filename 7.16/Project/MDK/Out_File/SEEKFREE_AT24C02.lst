@@ -1,0 +1,186 @@
+C251 COMPILER V5.60.0,  SEEKFREE_AT24C02                                                   13/07/22  15:38:07  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE SEEKFREE_AT24C02
+OBJECT MODULE PLACED IN .\Out_File\SEEKFREE_AT24C02.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\..\Libraries\seekfree_peripheral\SEEKFREE_AT24C02.c XSMALL INTR2 WA
+                    -RNINGLEVEL(3) BROWSE INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_periph
+                    -eral;..\CODE;..\USER\inc;..\USER\src;.\Out_File) DEBUG PRINT(.\Out_File\SEEKFREE_AT24C02.lst) TABS(2) OBJECT(.\Out_File\
+                    -SEEKFREE_AT24C02.obj) 
+
+stmt  level    source
+
+    1          /********************************************************************************************************
+             -*************
+    2           * COPYRIGHT NOTICE
+    3           * Copyright (c) 2018,逐飞科技
+    4           * All rights reserved.
+    5           * 技术讨论QQ群：一群：179029047(已满)  二群：244861897
+    6           *
+    7           * 以下所有内容版权均属逐飞科技所有，未经允许不得用于商业用途，
+    8           * 欢迎各位使用并传播本程序，修改内容时必须保留逐飞科技的版权声明。
+    9           *
+   10           * @file          虚拟示波器协议
+   11           * @company       成都逐飞科技有限公司
+   12           * @author        逐飞科技(QQ3184284598)
+   13           * @version       查看doc内version文件 版本说明
+   14           * @Software    MDK FOR C251 V5.60
+   15           * @Taobao      https://seekfree.taobao.com/
+   16           * @date          2019-04-30
+   17           * @note        
+   18           ********************************************************************************************************
+             -************/
+   19          #include "zf_delay.h"
+   20          #include "SEEKFREE_IIC.h"
+   21          #include "SEEKFREE_AT24C02.h"
+   22          
+   23          
+   24          #pragma warning disable = 173
+   25          
+   26          //-------------------------------------------------------------------------------------------------------
+             -------------
+   27          //  @brief      at24c02写一个字节
+   28          //  @param      byte_reg  at24c02地址(0-255)
+   29          //  @param      dat     需要写入的数据
+   30          //  @return     void          
+   31          //  @since      v1.0
+   32          //  Sample usage: 
+   33          //  @note       
+   34          //-------------------------------------------------------------------------------------------------------
+             -------------
+   35          void at24c02_write_byte(uint8 byte_reg, uint8 dat)
+   36          {
+   37   1        delay_ms(6);
+   38   1        simiic_write_reg(AT24C02_DEV_ADDR, byte_reg, dat);
+   39   1      }
+   40          
+   41          void at24c02_write_uint16(uint8 byte_reg, uint16 dat)
+   42          {
+   43   1        delay_ms(6);
+   44   1        simiic_write_reg(AT24C02_DEV_ADDR, byte_reg, dat>>8);
+*** WARNING C188 IN LINE 44 OF ..\..\Libraries\seekfree_peripheral\SEEKFREE_AT24C02.c: 'parameter 3': value truncated
+   45   1        delay_ms(6);
+   46   1        simiic_write_reg(AT24C02_DEV_ADDR, byte_reg+1,dat);
+*** WARNING C188 IN LINE 46 OF ..\..\Libraries\seekfree_peripheral\SEEKFREE_AT24C02.c: 'parameter 2': value truncated
+*** WARNING C188 IN LINE 46 OF ..\..\Libraries\seekfree_peripheral\SEEKFREE_AT24C02.c: 'parameter 3': value truncated
+   47   1      }
+   48          
+   49          //-------------------------------------------------------------------------------------------------------
+C251 COMPILER V5.60.0,  SEEKFREE_AT24C02                                                   13/07/22  15:38:07  PAGE 2   
+
+             -------------
+   50          //  @brief      at24c02读一个字节
+   51          //  @param      byte_reg  at24c02地址(0-255)
+   52          //  @return     uint8   返回读取到的字节数          
+   53          //  @since      v1.0
+   54          //  Sample usage: 
+   55          //  @note       
+   56          //-------------------------------------------------------------------------------------------------------
+             -------------
+   57          uint8 at24c02_read_byte(uint8 byte_reg)
+   58          {
+   59   1        delay_ms(6);
+   60   1        return simiic_read_reg(AT24C02_DEV_ADDR, byte_reg, SIMIIC);
+   61   1      }
+   62          
+   63          uint16 at24c02_read_uint16(uint8 byte_reg)
+   64          {
+   65   1        uint16 val = 0;
+   66   1        delay_ms(6);
+   67   1        val = simiic_read_reg(AT24C02_DEV_ADDR, byte_reg, SIMIIC);
+   68   1        val = val<<8 | at24c02_read_byte(byte_reg+1);
+*** WARNING C188 IN LINE 68 OF ..\..\Libraries\seekfree_peripheral\SEEKFREE_AT24C02.c: 'parameter 1': value truncated
+   69   1        return val;
+   70   1      }
+   71          //-------------------------------------------------------------------------------------------------------
+             -------------
+   72          //  @brief      at24c02写多个字节
+   73          //  @param      byte_reg  at24c02起始地址(0-255)
+   74          //  @param      dat_add   需要写入的数据指针
+   75          //  @param      num     需要写入多少个数据
+   76          //  @return     void          
+   77          //  @since      v1.0
+   78          //  Sample usage: 
+   79          //  @note       
+   80          //-------------------------------------------------------------------------------------------------------
+             -------------
+   81          void at24c02_write_bytes(uint8 byte_reg, uint8 *dat_add, uint8 num)
+   82          {
+   83   1        delay_ms(6);
+   84   1        simiic_start();
+   85   1        send_ch( (AT24C02_DEV_ADDR<<1) | 0x00);
+   86   1        send_ch( byte_reg );          
+   87   1      
+   88   1          while(--num)
+   89   1          {
+   90   2          send_ch( *dat_add++ );          
+   91   2          byte_reg++;
+   92   2          if((byte_reg % 8) == 0)
+   93   2          {
+   94   3            simiic_stop();
+   95   3            delay_ms(6);
+   96   3            simiic_start();
+   97   3            send_ch( (AT24C02_DEV_ADDR<<1) | 0x00);
+   98   3            send_ch( byte_reg );          
+   99   3          }
+  100   2          }
+  101   1        send_ch( *dat_add++ );   
+  102   1        simiic_stop();
+  103   1      }
+  104          
+  105          //-------------------------------------------------------------------------------------------------------
+             -------------
+  106          //  @brief      at24c02读多个字节
+  107          //  @param      byte_reg  at24c02起始地址(0-255)
+  108          //  @param      dat_add   需要读出的数据指针
+  109          //  @param      num     需要读出多少个数据
+C251 COMPILER V5.60.0,  SEEKFREE_AT24C02                                                   13/07/22  15:38:07  PAGE 3   
+
+  110          //  @return     void          
+  111          //  @since      v1.0
+  112          //  Sample usage: 
+  113          //  @note       
+  114          //-------------------------------------------------------------------------------------------------------
+             -------------
+  115          void at24c02_read_bytes(uint8 byte_reg, uint8 *dat_add, uint8 num)
+  116          {
+  117   1        delay_ms(5);
+  118   1        simiic_start();
+  119   1        send_ch( (AT24C02_DEV_ADDR<<1) | 0x00);  //发送器件地址加写位
+  120   1        send_ch( byte_reg );             //发送从机寄存器地址
+  121   1        delay_ms(5);
+  122   1        simiic_start();
+  123   1        send_ch( (AT24C02_DEV_ADDR<<1) | 0x01);  //发送器件地址加读位
+  124   1          while(--num)
+  125   1          {
+  126   2              *dat_add++ = read_ch(1); //读取数据
+  127   2          byte_reg++;
+  128   2          }
+  129   1        *dat_add++ = read_ch(0); //读取数据
+  130   1        simiic_stop();
+  131   1      }
+*** WARNING C183 IN LINE 65 OF ..\..\Libraries\seekfree_peripheral\SEEKFREE_AT24C02.c: dead assignment eliminated
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =       326     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =    ------          4
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =    ------     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  5 WARNING(S),  0 ERROR(S)

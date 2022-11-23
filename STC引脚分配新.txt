@@ -1,0 +1,83 @@
+屏幕 (硬件SPI)
+SCL			P25
+SDA			P23
+RST			P20
+DC			P21
+CS			P22
+BL			P27
+
+无线串口 
+TX(TIM2) 		                P36（蓝牙模块上标的TX）
+RX(TIM2)  		P37   （03）usart4（蓝牙模块上标的RX）
+RTS 			P75
+CTS			
+CMD			
+
+
+运放前排
+ADC1			P00 
+ADC2			P01       	 
+ADC3			P05 
+ADC4			P06
+ADC5                    P13        	
+ADC6                    P14        	
+ADC7                    P15
+后排
+ADC8                    P11
+ADC9		        P10
+ADC10                   P02
+ADC11		        P03
+
+
+IIC AT24C
+SCL 			P40
+SDA 			P67 
+
+
+
+编码器 
+DIR1			P35
+LSB1(TIM0) 		P34
+
+
+DIR2 			P77
+LSB2(TIM3) 		P04
+
+ICM20602(软件SPI):
+SPC			P71
+SDI			P72
+SDO			P41
+CS~			P70
+
+电机
+PWMA_CH1        L	P62 
+DRL1		L	P44	(高电平前进，低电平后退)
+
+
+PWMA_CH2	R	P60 
+DRR		R	P63	(高电平前进，低电平后退)
+
+舵机
+PWMB_CH1		P74
+
+
+
+引出的IO口    			P43  76 07 26 24 42 73 61		
+
+
+
+接收超声波
+UART3_RX_P50, UART3_TX_P51
+发送超声波
+P47
+
+Key 1  2  3  4  5
+  P32 33 45 46 53
+下降沿 按键需要接地 
+
+
+不建议使用的引脚：
+核心板上的type-c连接的串口	P30 P31 
+核心板上的晶振 		P16 P17 
+核心板上的LED 		P52
+核心板上的复位 		P54

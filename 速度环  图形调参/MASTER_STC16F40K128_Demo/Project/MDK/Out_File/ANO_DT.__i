@@ -1,0 +1,1 @@
+"..\USER\src\ANO_DT.c" XSMALL INTR2 WARNINGLEVEL (3) BROWSE INCDIR(..\..\Libraries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\src;.\Out_File) DEBUG PRINT(.\Out_File\ANO_DT.lst) TABS (2) OBJECT(.\Out_File\ANO_DT.obj)

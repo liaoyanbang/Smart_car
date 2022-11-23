@@ -1,0 +1,2205 @@
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 1   
+
+
+C251 COMPILER V5.60.0, COMPILATION OF MODULE isr
+OBJECT MODULE PLACED IN .\Out_File\isr.obj
+COMPILER INVOKED BY: D:\Keil_v5\C251\BIN\C251.EXE ..\USER\src\isr.c XSMALL INTR2 WARNINGLEVEL(3) BROWSE INCDIR(..\..\Lib
+                    -raries\libraries;..\..\Libraries\seekfree_libraries;..\..\Libraries\seekfree_peripheral;..\CODE;..\USER\inc;..\USER\src;
+                    -.\Out_File) DEBUG PRINT(.\Out_File\isr.lst) TABS(2) OBJECT(.\Out_File\isr.obj) 
+
+stmt  level    source
+
+    1          ///******************************************************************************************************
+             -***************
+    2          // * COPYRIGHT NOTICE
+    3          // * Copyright (c) 2020,逐飞科技
+    4          // * All rights reserved.
+    5          // * 技术讨论QQ群：一群：179029047(已满)  二群：244861897(已满)  三群：824575535
+    6          // *
+    7          // * 以下所有内容版权均属逐飞科技所有，未经允许不得用于商业用途，
+    8          // * 欢迎各位使用并传播本程序，修改内容时必须保留逐飞科技的版权声明。
+    9          // *
+   10          // * @file          isr
+   11          // * @company       成都逐飞科技有限公司
+   12          // * @author        逐飞科技(QQ790875685)
+   13          // * @version       查看doc内version文件 版本说明
+   14          // * @Software      MDK FOR C251 V5.60
+   15          // * @Target core   STC16F40K128
+   16          // * @Taobao        https://seekfree.taobao.com/
+   17          // * @date          2020-4-14
+   18          // ******************************************************************************************************
+             -**************/
+   19          #include "headfile.h"
+   20          #define LED P52
+   21          
+   22          int8 match = 0;  
+   23          uint16 distance;
+   24          uint8 dis_flag = 0;
+   25          
+   26          enum position Position;
+   27          enum normal_process Normal_Process = Normal_ing;
+   28          enum fork_process Fork_Process;
+   29          enum round_process Round_Process;
+   30          enum cross_process Cross_Process;
+   31          enum descent_process Descent_Process;
+   32          
+   33          
+   34          #define DIR1 P44  //左轮方向
+   35          #define DIR2 P63  //右轮方向
+   36          
+   37          #define FORK_InServo  50
+   38          #define FORK_OutServo  50
+   39          
+   40          #define Round_Servo 45
+   41          
+   42          #define FROK_ADD 0
+   43          
+   44          #define Descent_Speedadd 30
+   45          #define Descent_Speedsub 30
+   46          
+   47          #define FORK_Speedsub 30
+   48          //轮胎周长20.5cm·  一周2320个脉冲   1m/s  = 4.88r/s  =11317个脉冲 / s   5ms的周期 应该给 11317/200个脉冲
+             - = 57  2m/s 为114  
+   49          //Speed_target 在isr.h中定义
+   50          short Speed_target  = 0;
+   51          
+   52          short GoalPulseLL=0;          // 定义左电机全局设置变量
+   53          short GoalPulseRR=0;          // 定义右电机全局设置变量
+   54          
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 2   
+
+   55          short GoalPulseL=0;           // 定义左电机全局输入量
+   56          short GoalPulseR=0;           // 定义右电机全局输入量
+   57          
+   58          short MotorDutyL =0;
+   59          short MotorDutyR = 0;
+   60          
+   61          short PulseL = 0;          // 定义左编码器全局变量 
+   62          short PulseR = 0;          // 定义右编码器全局变量
+   63          
+   64          int16 ServoDuty =Servo_Middle; 
+   65          //差速公式
+   66          int8 chashu_flag = 0;
+   67          float chashu = 0.6;
+   68          float f_duoji;
+   69          float f_tanA;
+   70          //开始标志位
+   71          short flag_star =0;
+   72          int16 dig1,dig2,dig3,dig4;// dig1内侧差值  dig2外侧水平差值  dig3外侧垂直差值 dig4后排垂直差值
+   73          int16 error_dig4;
+   74          int16 dig_sum=0;
+   75          float input = 0.0; //差比和
+   76          float input1 = 0.0; //差比和 开方
+   77          //圈数
+   78          short count =0;
+   79          //三岔标志位
+   80          int8 fork_flag = 1;
+   81          //十字计数器
+   82          short cross_cnt = 0;
+   83          
+   84          int16 AD_V[11];//电感值
+   85          int16 AD[11];//归一化的值 0~100
+   86          float sensor_to_one[11];//归一化的值 0~1
+   87          int16 min_v = 0;
+   88          int16 max_v[11] = {0,0,0,0,0,0,0,0,0,0,0};
+   89          int16 max_fork_h[4]= {0,0,0,0};
+   90          uint16 time_5ms = 0;
+   91          int16 timeout = 0;
+   92          //是否采集adc最大值
+   93          int8 adc_get = 0;
+   94          int8 adc_get_flag = 0;
+   95          //比赛标志位
+   96          int8 match_flag = 0;
+   97          //菜单页面
+   98          uint8 view = 0;
+   99          //编码器积分
+  100          int8 cnt_star = 0;
+  101          int32 cnt = 0;
+  102          int8 cnt_left = 0;
+  103          //加减倍数
+  104          int16 beishu = 1;
+  105          //补偿标志位 补偿里昂
+  106          float ADC_Compensate = 0;//差比和补偿量 用于入环出环  进三岔 出三岔  0~10  0.2
+  107          int8 Compensate_flag = 0;//差比和补偿量标志位 在入环出环置1
+  108          
+  109          //三岔中间阈值
+  110          //三岔判断阈值
+  111          int16 fork_mid_max = 0;
+  112          int16 fork_mid_min = 0;
+  113          int16 fork_side_max = 0;
+  114          int16 fork_side_min = 0;
+  115          int16 fork_max = 0;
+  116          int16 fork_turn = 0;
+  117          int16 fork_back_side_max = 0;
+  118          int16 fork_back_mid_max = 0;
+  119          int16 fork_cnt_max = 0;
+  120          //圆环
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 3   
+
+  121          int16 circle_before_cnt = 0;//进环前
+  122          int16 circle_in_cnt = 0;//进环中
+  123          int8  cirlces_flag = 0;//多环
+  124          int16 circle = 0;//大小顺序
+  125          int16 circles_size[6]={123,132,321,312,231,213};
+  126          int16 circle_size[3]={1,2,3};
+  127          int16 circle_run_p  = 0;
+  128          
+  129          float Circle_H = 0.3;
+  130          float Circle_S = 0.7;
+  131          //进环阈值
+  132          int16 circle_max = 0;
+  133          int16 circle_in_max_left = 0;
+  134          int16 circle_in_max_right = 0;
+  135          //环中阈值
+  136          int16 circle_run_max_cnt = 0;
+  137          int16 circle_out_max_cnt = 0;
+  138          //出环阈值
+  139          int16 circle_out_max = 0;
+  140          uint16 distances   = 0;
+  141          float cross2_out = 0.0;
+  142          //十字阈值
+  143          int16 Cross_sum = 0;
+  144          int16 cross_run_p = 0;
+  145          int16 cross_cnt_max = 0;
+  146          int16 cross1_in_max = 0;
+  147          int16 cross2_in_max = 0;
+  148          //十字权重
+  149          float Cross_H = 0.20;
+  150          float Cross_S = 0.80;
+  151          //记录最大偏差 以及最大偏差变化率
+  152          uint16 max_dig = 0;
+  153          uint16 max_bianhua = 0;
+  154          int16 ad3_grow_flag = 0;
+  155          //横竖电感权重
+  156          float  Normal_H = 0.80;
+  157          float  Normal_S = 0.20;
+  158          
+  159          //每个速度的参数 120 125 130 135 140 145 150 155   （8个） 8*8*2=128btye
+  160          int16 temp_normal_kp[8];
+  161          int16 temp_fork_turn[8];
+  162          int16 temp_cross_run_p[8];
+  163          int16 temp_cross1_in_max[8];
+  164          int16 temp_cross2_in_max[8];
+  165          int16 temp_circle_in_max_right[8];
+  166          float temp_ADC_Compensate[8];
+  167          int16 temp_circle_run_p[8];
+  168          
+  169          void UART1_Isr() interrupt 4
+  170          {
+  171   1          uint8 res;
+  172   1        static uint8 dwon_count;
+  173   1          if(UART1_GET_TX_FLAG)
+  174   1          {
+  175   2              UART1_CLEAR_TX_FLAG;
+  176   2              busy[1] = 0;
+  177   2          }
+  178   1          if(UART1_GET_RX_FLAG)
+  179   1          {
+  180   2              UART1_CLEAR_RX_FLAG;
+  181   2              res = SBUF;
+  182   2              //程序自动下载
+  183   2              if(res == 0x7F)
+  184   2              {
+  185   3                  if(dwon_count++ > 20)
+  186   3                      IAP_CONTR = 0x60;
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 4   
+
+  187   3              }
+  188   2              else
+  189   2              {
+  190   3                  dwon_count = 0;
+  191   3              }
+  192   2          }
+  193   1      }
+  194          void UART2_Isr() interrupt 8
+  195          {
+  196   1          if(UART2_GET_TX_FLAG)
+  197   1        {
+  198   2              UART2_CLEAR_TX_FLAG;
+  199   2              busy[2] = 0;
+  200   2        }
+  201   1          if(UART2_GET_RX_FLAG)
+  202   1        {
+  203   2              UART2_CLEAR_RX_FLAG;
+  204   2          //接收数据寄存器为：S2BUF
+  205   2        }
+  206   1      }
+  207          //该函数在isr.c文件中的UART3_Isr函数进行回调
+  208          void Split_Ultrasonic_callback(uint8 buf)
+  209          {
+  210   1          static uint8 dat[3];
+  211   1          static uint8 num = 0;
+  212   1          
+  213   1          if(dis_flag==0)
+  214   1          {
+  215   2            dat[num] = buf;
+  216   2            if(dat[0] != 0xa5)  num = 0;//检查头帧是否正确，不正确就重新接收
+  217   2            else                num++;
+  218   2            
+  219   2            if(num==3)                  //接收完成，开始处理数据
+  220   2            {
+  221   3                num = 0;
+  222   3                //将数据的高八位与低八位进行组合，得到距离信息单位MM
+  223   3                distance = dat[1]<<8   | dat[2];
+  224   3                dis_flag = 0;
+  225   3            }
+  226   2          }
+  227   1      }
+  228          void UART3_Isr() interrupt 17 //超声波
+  229          {
+  230   1        if(UART3_GET_TX_FLAG)
+  231   1        {
+  232   2              UART3_CLEAR_TX_FLAG;
+  233   2              busy[3] = 0;
+  234   2        }
+  235   1        if(UART3_GET_RX_FLAG)
+  236   1        {
+  237   2             UART3_CLEAR_RX_FLAG;
+  238   2          //接收数据寄存器为：S3BUF
+  239   2             Split_Ultrasonic_callback(S3BUF);
+  240   2        }
+  241   1      
+  242   1      }
+  243          void UART4_Isr() interrupt 18 //蓝牙接收中断
+  244          {
+  245   1        if(UART4_GET_TX_FLAG)
+  246   1        {
+  247   2          UART4_CLEAR_TX_FLAG;
+  248   2          busy[4] = 0;
+  249   2        }
+  250   1        if(UART4_GET_RX_FLAG)
+  251   1        {
+  252   2          UART4_CLEAR_RX_FLAG;
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 5   
+
+  253   2          //接收数据寄存器为：S4BUF;
+  254   2          if(wireless_type == WIRELESS_CH9141)
+  255   2          {
+  256   3            res= BLUETOOTH_CH9141_DATA_BUF;
+  257   3            if(res == 'G')
+  258   3            {
+  259   4              if(match)
+  260   4              Star_handle();
+  261   4            }
+  262   3            // bluetooth_ch9141_uart_callback();   //蓝牙转串口回调函数
+  263   3          }
+  264   2        }
+  265   1      }
+  266          void INT0_Isr() interrupt 0
+  267          {
+  268   1        LED = !LED; //反转LED
+  269   1        if(flag_star)
+  270   1          flag_star =0;
+  271   1        else flag_star = 1;
+  272   1      }
+  273          void INT1_Isr() interrupt 2
+  274          {
+  275   1      //  Velocity_KP+=0.1;
+  276   1        LED = !LED; //反转LED
+  277   1      }
+  278          void INT2_Isr() interrupt 10
+  279          {
+  280   1        LED = !LED; //反转LED
+  281   1      //  GoalPulseLL+=10;
+  282   1      //  GoalPulseRR+=10;
+  283   1        
+  284   1        INT2_CLEAR_FLAG;  //清除中断标志
+  285   1      }
+  286          void INT3_Isr() interrupt 11
+  287          {
+  288   1        LED = !LED; //反转LED
+  289   1      //  GoalPulseLL-=10;
+  290   1      //  GoalPulseRR-=10;
+  291   1        INT3_CLEAR_FLAG;  //清除中断标志
+  292   1      }
+  293          
+  294          void INT4_Isr() interrupt 16
+  295          {
+  296   1        INT4_CLEAR_FLAG;  //清除中断标志
+  297   1      }
+  298          
+  299          
+  300          
+  301          void ADV_Init(void)
+  302          {
+  303   1        char txt[20];
+  304   1        int16 i = 0, j =0;
+  305   1        int16 ad_valu[11]={0,0,0,0,0,0,0,0,0,0,0};
+  306   1        
+  307   1        adc_get = at24c02_read_byte(0);
+  308   1        match   = at24c02_read_byte(1);
+  309   1        if(adc_get == 0)
+  310   1        {
+  311   2          for(i=0;i<11;i++)
+  312   2          {
+  313   3              max_v[i]      = at24c02_read_uint16(2+2*i);
+*** WARNING C188 IN LINE 313 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  314   3              delay_ms(10);
+  315   3          }
+  316   2        }
+  317   1        //VIEW0
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 6   
+
+  318   1        Speed_target        = at24c02_read_uint16(24);
+  319   1        duojikp_normal_sqrt = at24c02_read_uint16(26);
+  320   1        duojikd_normal_sqrt = at24c02_read_uint16(28);
+  321   1        chashu_flag = at24c02_read_byte(46);
+  322   1        chashu = (float)at24c02_read_byte(60)/10;
+  323   1        cross_run_p=  at24c02_read_uint16(79);
+  324   1        //view1
+  325   1        Cross_H          = at24c02_read_uint16(30)/100.0;
+  326   1        cross1_in_max    = at24c02_read_uint16(32);
+  327   1        cross2_in_max    = at24c02_read_uint16(34);
+  328   1        Circle_H         = at24c02_read_uint16(36)/100.0;
+  329   1        fork_cnt_max     = at24c02_read_uint16(38);
+  330   1        cross_cnt_max    = at24c02_read_uint16(40);
+  331   1        cross2_out       = at24c02_read_uint16(42)/100.0;
+  332   1        fork_turn        = at24c02_read_uint16(44);
+  333   1        
+  334   1        /*
+  335   1            at24c02_write_uint16(30,Cross_H*100);
+  336   1            at24c02_write_uint16(32,cross1_in_max);
+  337   1            at24c02_write_uint16(34,cross2_in_max);
+  338   1            at24c02_write_uint16(36,Circle_H*100);
+  339   1            at24c02_write_uint16(38,fork_cnt_max);
+  340   1            at24c02_write_uint16(40,cross_cnt_max);
+  341   1            at24c02_write_uint16(42,cross2_out*100);
+  342   1            at24c02_write_uint16(44,fork_turn);
+  343   1        */
+  344   1        //view2
+  345   1        circle_before_cnt     = at24c02_read_uint16(47);
+  346   1        circle_in_cnt     = at24c02_read_uint16(49);
+  347   1        fork_flag = at24c02_read_byte(51);
+  348   1        circle_run_p       = at24c02_read_uint16(52);
+  349   1        circle_in_max_left = at24c02_read_uint16(54);
+  350   1        circle_in_max_right= at24c02_read_uint16(56);
+  351   1        circle_out_max     = at24c02_read_uint16(58);
+  352   1        ADC_Compensate     = (float)at24c02_read_uint16(61) /100;
+  353   1        //view3
+  354   1        Cross_sum=      at24c02_read_uint16(63);
+  355   1        fork_mid_max=   at24c02_read_uint16(65);
+  356   1        fork_mid_min=   at24c02_read_uint16(67);
+  357   1        fork_side_max=    at24c02_read_uint16(69);
+  358   1        fork_side_min=    at24c02_read_uint16(71);
+  359   1        circle_run_max_cnt=   at24c02_read_uint16(73);
+  360   1        circle_out_max_cnt =    at24c02_read_uint16(75);
+  361   1        circle_max  = at24c02_read_uint16(77);
+  362   1        
+  363   1        
+  364   1        //读取对应速度的对应参数
+  365   1        /*
+  366   1      int16 temp_normal_kp[8]; 79+2*8
+  367   1      int16 temp_fork_turn[8]; 95+2*8
+  368   1      int16 temp_cross_run_p[8]; 111+2*8
+  369   1      int16 temp_cross1_in_max[8]; 127+2*8
+  370   1      int16 temp_cross2_in_max[8]; 143+2*8
+  371   1      int16 temp_circle_in_max_right[8]; 159+2*8
+  372   1      float temp_ADC_Compensate[8]; 175+2*8
+  373   1      int16 temp_circle_run_p[8];191 +2*8
+  374   1        */
+  375   1        for(i = 0;i<8;i++)
+  376   1        {
+  377   2          if(Speed_target==120+5*i)
+  378   2          {
+  379   3            duojikp_normal_sqrt = at24c02_read_uint16(79+2*i);
+*** WARNING C188 IN LINE 379 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  380   3            fork_turn = at24c02_read_uint16(95+2*i);
+*** WARNING C188 IN LINE 380 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  381   3            cross_run_p = at24c02_read_uint16(111+2*i);
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 7   
+
+*** WARNING C188 IN LINE 381 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  382   3            cross1_in_max = at24c02_read_uint16(127+2*i);
+*** WARNING C188 IN LINE 382 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  383   3            cross2_in_max = at24c02_read_uint16(143+2*i);
+*** WARNING C188 IN LINE 383 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  384   3            circle_in_max_right = at24c02_read_uint16(159+2*i);
+*** WARNING C188 IN LINE 384 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  385   3            ADC_Compensate = at24c02_read_uint16(175+2*i)/100.0;
+*** WARNING C188 IN LINE 385 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  386   3            circle_run_p = at24c02_read_uint16(191+2*i);
+*** WARNING C188 IN LINE 386 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  387   3          }
+  388   2        }
+  389   1        
+  390   1        if(adc_get==1)
+  391   1        {
+  392   2          lcd_showstr_simspi(0,0,(char*)"Get Max adv...");
+  393   2          while(1)
+  394   2          {
+  395   3            ad_valu[0]=adc_once(ADC_P00,ADC_10BIT);
+  396   3            ad_valu[1]=adc_once(ADC_P01,ADC_10BIT);
+  397   3            ad_valu[2]=adc_once(ADC_P05,ADC_10BIT);
+  398   3            ad_valu[3]=adc_once(ADC_P06,ADC_10BIT);
+  399   3            ad_valu[4]=adc_once(ADC_P13,ADC_10BIT);
+  400   3            ad_valu[5]=adc_once(ADC_P14,ADC_10BIT);
+  401   3            ad_valu[6]=adc_once(ADC_P15,ADC_10BIT);
+  402   3            ad_valu[7]=adc_once(ADC_P11,ADC_10BIT);
+  403   3            ad_valu[8]=adc_once(ADC_P10,ADC_10BIT);
+  404   3            ad_valu[9]=adc_once(ADC_P02,ADC_10BIT);
+  405   3            ad_valu[10]=adc_once(ADC_P03,ADC_10BIT);
+  406   3            for(j=0;j<11;j++)
+  407   3            {
+  408   4              if(max_v[j]<ad_valu[j])
+  409   4              {
+  410   5                max_v[j] = ad_valu[j];
+  411   5              }
+  412   4            }
+  413   3            delay_ms(5);
+  414   3            sprintf((char*)txt,"7:%3d 6:%3d 5:%3d       ",max_v[6],max_v[5],max_v[4]);  // 显示电感的值
+  415   3            lcd_showstr_simspi(0,2,(char*)txt);
+  416   3            sprintf(txt,"4:%3d 3:%3d             ",max_v[3],max_v[2]);  // 显示电感归一化的值
+  417   3            lcd_showstr_simspi(0,3,(char*)txt);
+  418   3            sprintf(txt,"2:%3d 1:%3d            ",max_v[1],max_v[0]); // 显示电感归一化的值
+  419   3            lcd_showstr_simspi(0,4,(char*)txt);
+  420   3            sprintf(txt,"7:%3d 8:%3d          ",max_v[7],max_v[8]); // 显示电感归一化的值
+  421   3            lcd_showstr_simspi(0,5,(char*)txt);
+  422   3            sprintf(txt,"9:%3d 10:%3d          ",max_v[9],max_v[10]); // 显示电感归一化的值
+  423   3            lcd_showstr_simspi(0,6,(char*)txt);
+  424   3            delay_ms(50);
+  425   3            if(key_read()==1) break;
+  426   3          }
+  427   2          for(i=0;i<11;i++)//gai
+  428   2          {
+  429   3            at24c02_write_uint16(2+2*i,max_v[i]);
+*** WARNING C188 IN LINE 429 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+  430   3            delay_ms(10);
+  431   3          }
+  432   2          delay_ms(2000);
+  433   2        }
+  434   1        else
+  435   1        {
+  436   2            lcd_showstr_simspi(0,0,(char*)"Now Max adv...");
+  437   2            sprintf((char*)txt,"6:%3d 5:%3d 4:%3d       ",max_v[6],max_v[5],max_v[4]);  // 显示电感的值
+  438   2            lcd_showstr_simspi(0,2,(char*)txt);
+  439   2            sprintf(txt,"3:%3d 2:%3d             ",max_v[3],max_v[2]);  // 显示电感归一化的值
+  440   2            lcd_showstr_simspi(0,3,(char*)txt);
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 8   
+
+  441   2            sprintf(txt,"1:%3d 0:%3d            ",max_v[1],max_v[0]); // 显示电感归一化的值
+  442   2            lcd_showstr_simspi(0,4,(char*)txt);
+  443   2            sprintf(txt,"7:%3d 8:%3d          ",max_v[7],max_v[8]); // 显示电感归一化的值
+  444   2            lcd_showstr_simspi(0,5,(char*)txt);
+  445   2            sprintf(txt,"9:%3d 10:%3d          ",max_v[9],max_v[10]); // 显示电感归一化的值
+  446   2            lcd_showstr_simspi(0,6,(char*)txt);
+  447   2            delay_ms(1000);
+  448   2        }
+  449   1        lcd_clear_simspi(BLACK);
+  450   1      }
+  451          
+  452          
+  453          
+  454          void Read_ADC(void)//读取信号
+  455          {
+  456   1        static int16  i = 0;
+  457   1        static int16  ad_valu_v[11];
+  458   1        static int16  ss[] = {0,1,2,3,4,5,6,8,9};
+  459   1      
+  460   1        ad_valu_v[0]=adc_once(ADC_P00,ADC_10BIT);
+  461   1        ad_valu_v[1]=adc_once(ADC_P01,ADC_10BIT);
+  462   1        ad_valu_v[2]=adc_once(ADC_P05,ADC_10BIT);
+  463   1        ad_valu_v[3]=adc_once(ADC_P06,ADC_10BIT);
+  464   1        ad_valu_v[4]=adc_once(ADC_P13,ADC_10BIT);
+  465   1        ad_valu_v[5]=adc_once(ADC_P14,ADC_10BIT);
+  466   1        ad_valu_v[6]=adc_once(ADC_P15,ADC_10BIT);
+  467   1      //  ad_valu_v[7]=adc_once(ADC_P11,ADC_10BIT);
+  468   1        ad_valu_v[8]=adc_once(ADC_P10,ADC_10BIT);
+  469   1        ad_valu_v[9]=adc_once(ADC_P02,ADC_10BIT);
+  470   1      //  ad_valu_v[10]=adc_once(ADC_P03,ADC_10BIT);
+  471   1        for(i=1;i<5;i++)
+  472   1        {
+  473   2          ad_valu_v[0]+=adc_once(ADC_P00,ADC_10BIT);
+  474   2          ad_valu_v[1]+=adc_once(ADC_P01,ADC_10BIT);
+  475   2          ad_valu_v[2]+=adc_once(ADC_P05,ADC_10BIT);
+  476   2          ad_valu_v[3]+=adc_once(ADC_P06,ADC_10BIT);//
+  477   2          ad_valu_v[4]+=adc_once(ADC_P13,ADC_10BIT);//
+  478   2          ad_valu_v[5]+=adc_once(ADC_P14,ADC_10BIT);
+  479   2          ad_valu_v[6]+=adc_once(ADC_P15,ADC_10BIT);
+  480   2      //    ad_valu_v[7]+=adc_once(ADC_P11,ADC_10BIT);
+  481   2          ad_valu_v[8]+=adc_once(ADC_P10,ADC_10BIT);
+  482   2          ad_valu_v[9]+=adc_once(ADC_P02,ADC_10BIT);
+  483   2      //    ad_valu_v[10]+=adc_once(ADC_P03,ADC_10BIT);
+  484   2        }
+  485   1            
+  486   1            for(i=0;i<(sizeof(ss)/sizeof(ss[0]));i++)    //求平均
+  487   1            {      
+  488   2               AD_V[ss[i]] = ad_valu_v[ss[i]] / 5;
+  489   2            }
+  490   1      }
+  491          
+  492          void Date_analyse()//信号处理
+  493          {
+  494   1           static int16  i =0; 
+  495   1           static int16  aa[] = {0,1,2,3,4,5,6,8,9};
+  496   1           static int16 last_ad3 = 0;
+  497   1           Read_ADC();
+  498   1           for(i =0;i<(sizeof(aa)/sizeof(aa[0]));i++)
+  499   1           {
+  500   2              sensor_to_one[aa[i]] = (float)(AD_V[aa[i]] - 0)/(float)(max_v[aa[i]] - min_v); //最大最小值可改为数组
+             - 
+  501   2              if(sensor_to_one[aa[i]]<=0.0)  sensor_to_one[aa[i]]=0.001;
+  502   2              if(sensor_to_one[aa[i]]>1.0)  sensor_to_one[aa[i]]=1.0; 
+  503   2              AD[aa[i]] = 100*sensor_to_one[aa[i]];     //AD[i]为归一化后的值  范围为0-100
+  504   2           }
+  505   1           /*********************归一化处理********************/
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 9   
+
+  506   1      //     for(i=0;i<7;i++) 
+  507   1      //     {
+  508   1      //        sensor_to_one[i] = (float)(AD_V[i] - min_v)/(float)(max_v[i] - min_v); //最大最小值可改为数组 
+  509   1      //        if(sensor_to_one[i]<=0.0)  sensor_to_one[i]=0.001;
+  510   1      //        if(sensor_to_one[i]>1.0)  sensor_to_one[i]=1.0; 
+  511   1      //        AD[i] = 100*sensor_to_one[i];     //AD[i]为归一化后的值  范围为0-100
+  512   1      //    }
+  513   1      //    if(Position == Fork_R || Position == Fork_L)
+  514   1      //    {
+  515   1      ////      for(i=8;i<10;i++)
+  516   1      ////      {
+  517   1      ////          sensor_to_one[i] = (float)(AD_V[i] - min_v)/(float)(max_fork_h[i-7] - min_v); //最大最小值可改为
+             -数组 
+  518   1      ////          if(sensor_to_one[i]<=0.0)  sensor_to_one[i]=0.001;
+  519   1      ////          if(sensor_to_one[i]>1.0)  sensor_to_one[i]=1.0; 
+  520   1      ////          AD[i] = 100*sensor_to_one[i];     //AD[i]为归一化后的值  范围为0-100
+  521   1      ////      }
+  522   1      //        sensor_to_one[1] = (float)(AD_V[1] - min_v)/(float)(max_fork_h[1] - min_v); //最大最小值可改为数组 
+  523   1      //        if(sensor_to_one[1]<=0.0)  sensor_to_one[1]=0.001;
+  524   1      //        if(sensor_to_one[1]>1.0)  sensor_to_one[1]=1.0; 
+  525   1      //        AD[1] = 100*sensor_to_one[1];     //AD[i]为归一化后的值  范围为0-100
+  526   1      //      
+  527   1      //        sensor_to_one[5] = (float)(AD_V[5] - min_v)/(float)(max_fork_h[2] - min_v); //最大最小值可改为数组 
+  528   1      //        if(sensor_to_one[5]<=0.0)  sensor_to_one[5]=0.001;
+  529   1      //        if(sensor_to_one[5]>1.0)  sensor_to_one[5]=1.0; 
+  530   1      //        AD[5] = 100*sensor_to_one[5];     //AD[i]为归一化后的值  范围为0-100
+  531   1      //    }
+  532   1            if(AD[3]-last_ad3>0)
+  533   1            {
+  534   2              ad3_grow_flag = 1;
+  535   2            }
+  536   1            else 
+  537   1            {
+  538   2              ad3_grow_flag = 0;
+  539   2            }
+  540   1            last_ad3  = AD[3];
+  541   1          
+  542   1          
+  543   1      }    
+  544          void TM0_Isr() interrupt 1
+  545          { 
+  546   1      }
+  547          void TM1_Isr() interrupt 3  
+  548          {   
+  549   1      }
+  550          void TM2_Isr() interrupt 12 
+  551          {
+  552   1        Turn_control(); 
+  553   1        TIM2_CLEAR_FLAG;  //清除中断标志
+  554   1      }
+  555          void TM3_Isr() interrupt 19
+  556          {
+  557   1        TIM3_CLEAR_FLAG; //清除中断标志
+  558   1      }
+  559          
+  560          
+  561          
+  562          void TM4_Isr() interrupt 20//速度环
+  563          {
+  564   1          static int16 flag = 0;
+  565   1          static int16 time_50ms =0;
+  566   1          //time_50ms++;
+  567   1          if(AD[9]<=10&& AD[8]<=10)//停车  
+  568   1          {
+  569   2            timeout++;
+  570   2            if(timeout>=20&&timeout<100)
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 10  
+
+  571   2            { 
+  572   3              GoalPulseLL = 0;
+  573   3              GoalPulseRR = 0;
+  574   3              //DisableGlobalIRQ();
+  575   3            }
+  576   2            else if(timeout>=100)
+  577   2            {
+  578   3              flag_star=0;
+  579   3            }
+  580   2          }
+  581   1          PulseL = ctimer_count_read(CTIM0_P34);//读取编码器的值
+  582   1          PulseR = 0- ctimer_count_read(CTIM3_P04);
+  583   1          if(cnt_star) 
+  584   1          {
+  585   2            if(cnt_left)
+  586   2            {
+  587   3              cnt += PulseL;
+  588   3            }
+  589   2            else
+  590   2            {
+  591   3              cnt += PulseR;
+  592   3            }
+  593   2          }
+  594   1          if(chashu_flag)
+  595   1          {
+  596   2            f_duoji = (Servo_Middle - ServoDuty) / 180.0;  //阿克曼变速
+  597   2            f_tanA = chashu* (f_duoji + f_duoji * f_duoji * f_duoji / 3.0 + 2 * f_duoji * f_duoji * f_duoji * f_du
+             -oji / 15.0); 
+  598   2            if (f_tanA > 0) //右
+  599   2            {
+  600   3              GoalPulseL=GoalPulseLL+ 1.0 * GoalPulseLL * f_tanA;
+  601   3              GoalPulseR=GoalPulseRR- 0.8 * GoalPulseRR * f_tanA;
+  602   3            }
+  603   2            else 
+  604   2            {
+  605   3              GoalPulseL=GoalPulseLL+ 0.8 * GoalPulseLL * f_tanA;
+  606   3              GoalPulseR=GoalPulseRR- 1.0 * GoalPulseRR * f_tanA;
+  607   3            }
+  608   2            ////pid_control 输入变量为编码器的值  目标变量为上面得到的值 通过pid 得到pwm输出
+  609   2            if(flag_star)
+  610   2            {
+  611   3                MotorDutyL = Incremental_PI_L(PulseL,GoalPulseL);
+  612   3                MotorDutyR = Incremental_PI_R(PulseR,GoalPulseR);
+  613   3            }
+  614   2          }
+  615   1          else 
+  616   1          {
+  617   2            if(flag_star)
+  618   2            {
+  619   3                MotorDutyL = Incremental_PI_L(PulseL,GoalPulseLL);
+  620   3                MotorDutyR = Incremental_PI_R(PulseR,GoalPulseRR);
+  621   3            }
+  622   2          }
+  623   1      
+  624   1          if(MotorDutyL>=0) DIR1=1;
+  625   1          else {DIR1=0; MotorDutyL= 0-MotorDutyL;}
+  626   1          if(MotorDutyR>=0) DIR2=1;
+  627   1          else {DIR2=0; MotorDutyR= 0-MotorDutyR;}
+  628   1          if(flag_star==0)
+  629   1          {
+  630   2            MotorDutyL=MotorDutyR=0;
+  631   2          }
+  632   1          pwm_duty(PWMA_CH2P_P62,MotorDutyL);  //左边电机
+  633   1          pwm_duty(PWMA_CH1P_P60,MotorDutyR);  //右边电机
+  634   1          
+  635   1          if(ServoDuty>Servo_Left_Max) ServoDuty = Servo_Left_Max;
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 11  
+
+  636   1          else if(ServoDuty<Servo_Right_Min) ServoDuty = Servo_Right_Min;
+  637   1          pwm_duty(PWMB_CH1_P74,ServoDuty);
+  638   1        
+  639   1        TIM4_CLEAR_FLAG; //清除中断标志
+  640   1      
+  641   1      }
+  642          void Control(void)
+  643          {
+  644   1        switch(Position)  //状态机
+  645   1        {
+  646   2          case Normal:
+  647   2          {
+  648   3            Normal_handle();
+  649   3            break;
+  650   3          }
+  651   2          case Fork_R:
+  652   2          {
+  653   3            Fork_Rhandle();
+  654   3            break;
+  655   3          }
+  656   2          case Fork_L:
+  657   2          {
+  658   3            Fork_Lhandle();
+  659   3            break;
+  660   3          }
+  661   2          case Round:
+  662   2          {
+  663   3            Round_handle();
+  664   3            break;
+  665   3          }
+  666   2          case Cross:
+  667   2          {
+  668   3            Cross_handle();
+  669   3            break;
+  670   3          }
+  671   2          case Descent:
+  672   2          {
+  673   3            Descent_handle();
+  674   3            break;
+  675   3          }
+  676   2          default : 
+  677   2          {
+  678   3            Position = Normal;
+  679   3            break;
+  680   3          }
+  681   2        }
+  682   1      }
+  683          void Turn_control(void)
+  684          {
+  685   1          Date_analyse();//ADC采集处理
+  686   1          if(Position == Normal)
+  687   1          {
+  688   2            shibie();//识别元素
+  689   2          }
+  690   1          Control();//执行对应元素的过程
+  691   1          ////限幅
+  692   1          if(ServoDuty>Servo_Left_Max) ServoDuty = Servo_Left_Max;
+  693   1          else if(ServoDuty<Servo_Right_Min) ServoDuty = Servo_Right_Min;
+  694   1          pwm_duty(PWMB_CH1_P74,ServoDuty);
+  695   1      }
+  696          void Star_handle(void)//开始处理
+  697          {
+  698   1        
+  699   1        flag_star = 1;
+  700   1        timeout = 0;
+  701   1        GoalPulseLL = Speed_target ;
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 12  
+
+  702   1        GoalPulseRR = Speed_target ;
+  703   1        Position = Fork_R;
+  704   1        Fork_Process = Forking;
+  705   1        fork_flag = 0;
+  706   1        count = 0;
+  707   1      }
+  708          float err_get_f(float A, float B) //前排横竖电感加权
+  709          {
+  710   1          uint16 temp_add1=0,temp_add2=0,temp_sub1=0,temp_sub2=0;
+  711   1        
+  712   1          temp_sub1=AD[2]-AD[4];
+  713   1          temp_sub2=AD[0]-AD[6];
+  714   1          temp_add1=AD[4]+AD[2];
+  715   1          temp_add2=AD[0]+AD[6];
+  716   1      
+  717   1          return (float)(A*temp_sub1+B*temp_sub2)/(float)(A*temp_add1+B*temp_add2);
+  718   1      }
+  719          float err_get_b(float A, float B) //后排普通循迹 两个横 前排两个横
+  720          {
+  721   1          int16 temp_add1=0,temp_add2=0,temp_sub1=0,temp_sub2=0;
+  722   1          temp_sub1=AD[9]-AD[8];
+  723   1          temp_sub2=AD[2]-AD[4];
+  724   1          temp_add1=AD[8]+AD[9];
+  725   1          temp_add2=AD[2]+AD[4];
+  726   1          return (float)(A*temp_sub1+B*temp_sub2)/(float)(A*temp_add1+B*temp_add2);
+  727   1      }
+  728          float err_get()
+  729          {
+  730   1        return (float)(sqrt((float)AD[2])-sqrt((float)AD[4]))/(AD[2]+AD[4]);
+  731   1      }
+  732          float err_get_cross()
+  733          {
+  734   1        return (float)(sqrt((float)AD[9])-sqrt((float)AD[8]))/(AD[8]+AD[9]);
+  735   1      }
+  736          float err_in_cross()
+  737          {
+  738   1        return (float)((AD[1]-AD[5]))/(float)(AD[1]+AD[5]);
+  739   1      }
+  740          void Normal_handle(void)//正常巡线处理
+  741          {
+  742   1        //static float last_input = 0;
+  743   1        if(Compensate_flag)
+  744   1        {
+  745   2          input1 = ADC_Compensate + err_get_f(Normal_H,1-Normal_H); //ADC_Compensate 0~10 补偿量
+  746   2          ServoDuty = Servo_Middle - pid_duoji_normal_sqrt(input1);
+  747   2        }
+  748   1        else
+  749   1        {
+  750   2          //input1 = 10 * err_get(); //差比和（差）求偏离程度
+  751   2          input1 = err_get_f(Normal_H,1-Normal_H);
+  752   2          ServoDuty = Servo_Middle - pid_duoji_normal_sqrt(input1);
+  753   2      //    last_input = input1;
+  754   2        }
+  755   1         if(cross_cnt==2&&cnt>=5000&&cnt_star)//第二个十字出来一段路程再开三岔
+  756   1        {
+  757   2          fork_flag  = 1;
+  758   2          cross_cnt  = 0;
+  759   2          cnt_star = 0;
+  760   2          cnt = 0;
+  761   2        }
+  762   1      }
+  763          
+  764          void Round_run(void)//圆环巡线处理
+  765          {
+  766   1        //static float last_input = 0;
+  767   1        if(Compensate_flag)
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 13  
+
+  768   1        {
+  769   2          input1 = ADC_Compensate + 10* err_get_cross(); //ADC_Compensate 0~10 补偿量
+  770   2          ServoDuty = Servo_Middle - pid_duoji_cross(input1);
+  771   2        }
+  772   1        else
+  773   1        {
+  774   2            input1 = 10 * err_get_cross(); //差比和（差）求偏离程度
+  775   2            ServoDuty = Servo_Middle - pid_duoji_cross(input1);
+  776   2      //    last_input = input1;
+  777   2        }
+  778   1      }
+  779          
+  780          void Round_handle(void) //环岛处理
+  781          {
+  782   1        static float dig= 0;
+  783   1        static float ADC_Compensate_temp = 0.0;
+  784   1        switch(Round_Process)
+  785   1        {     
+  786   2          case Round_Ining://入环前 判断左环或右环
+  787   2          {
+  788   3            if(cnt_star)
+  789   3            {
+  790   4              if(cnt>=circle_before_cnt)
+  791   4              {
+  792   5                if(AD[0]>=circle_in_max_right) 
+  793   5                {
+  794   6                  Round_Process = Round_IningR;
+  795   6                  Compensate_flag = 1;
+  796   6                  cnt_left = 1;
+  797   6                  cnt = 0;
+  798   6                  if(ADC_Compensate<0) ADC_Compensate = 0-ADC_Compensate;
+  799   6                }
+  800   5      //          if(AD[6]>=circle_in_max_left)
+  801   5      //          {
+  802   5      //            Round_Process = Round_IningL;
+  803   5      //            Compensate_flag = 1;
+  804   5      //            cnt_left = 0;
+  805   5      //            cnt = 0;
+  806   5      //            if(ADC_Compensate>0) ADC_Compensate = 0-ADC_Compensate;
+  807   5      //          }
+  808   5              }
+  809   4            }
+  810   3            Normal_handle();
+  811   3            break;
+  812   3          }
+  813   2          case Round_IningL:
+  814   2          {
+  815   3            if(cnt_star)
+  816   3            {
+  817   4              if(cnt>=circle_in_cnt)
+  818   4              {
+  819   5                Round_Process=Round_InoverL; //判断入环结束
+  820   5                Compensate_flag = 0;
+  821   5                ADC_Compensate_temp = ADC_Compensate;
+  822   5                ADC_Compensate  = -0.08 ;
+  823   5                cnt_star = 1;
+  824   5                cnt_left = 0;
+  825   5                cnt = 0;
+  826   5              }
+  827   4            }
+  828   3            input1 = ADC_Compensate + 10* (err_get()>0?0:err_get()); //ADC_Compensate 0~10 补偿量
+  829   3            ServoDuty = Servo_Middle - pid_duoji_normal_sqrt(input1);
+  830   3            break;
+  831   3          }
+  832   2          case Round_InoverL:
+  833   2          {
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 14  
+
+  834   3            
+  835   3            input1 = 10*(float)(sqrt((float)AD[0])-sqrt((float)AD[6]))/(AD[0]+AD[6]);
+  836   3            ServoDuty = Servo_Middle - circle_run_p*(input1);
+  837   3            if(cnt>=circle_run_max_cnt)
+  838   3            {
+  839   4              if(AD[0]>=circle_out_max) //判断预出环 
+  840   4              {
+  841   5                Round_Process = Round_OutL ; 
+  842   5                Compensate_flag = 1;
+  843   5                ADC_Compensate = ADC_Compensate_temp;
+  844   5              }
+  845   4            }
+  846   3            break;
+  847   3          }
+  848   2          case Round_OutL: // 出左环
+  849   2          {
+  850   3            input1 = ADC_Compensate + 10* (err_get()>0?0:err_get()); //ADC_Compensate 0~10 补偿量
+  851   3            ServoDuty = Servo_Middle - pid_duoji_normal_sqrt(input1);
+  852   3            if(AD[3]>=90)
+  853   3            {
+  854   4              Compensate_flag = 0;
+  855   4              Round_Process = Round_Outover;
+  856   4            }
+  857   3            break;
+  858   3          }
+  859   2          //右环   
+  860   2          case Round_IningR:
+  861   2          {
+  862   3              if(cnt_star)
+  863   3              {
+  864   4                if(cnt>=circle_in_cnt)
+  865   4                {
+  866   5                  Round_Process=Round_InoverR; //判断入环结束
+  867   5      //            Compensate_flag = 0;
+  868   5      //            ADC_Compensate_temp = ADC_Compensate;
+  869   5                  //ADC_Compensate  = 0.08 ;
+  870   5                  cnt_star = 1;
+  871   5                  cnt = 0;
+  872   5                }
+  873   4              }
+  874   3            //input1 = 10*(float)(sqrt((float)AD[0])-0)/(AD[0]+AD[6]);
+  875   3            input1 = (float)(AD[0]-0)/(AD[0]+AD[6]);
+  876   3            ServoDuty = Servo_Middle - circle_run_p*(input1);
+  877   3      //      input1 = ADC_Compensate + 10* (err_get()>0?err_get():0); //ADC_Compensate 0~10 补偿量
+  878   3      //      ServoDuty = Servo_Middle - pid_duoji_normal_sqrt(input1);
+  879   3            //if(AD[4]<=10 &&AD[5]<=10 && AD[6]<=10)  Round_Process=Round_InoverR; //判断入环结束
+  880   3            break;
+  881   3          }
+  882   2          case Round_InoverR://
+  883   2          {
+  884   3            input1 = err_get_f(Circle_H,1-Circle_H);//0.3
+  885   3            ServoDuty = Servo_Middle - pid_duoji_normal_sqrt(input1);
+  886   3      //      input1 = 10*(float)(sqrt((float)AD[0])-sqrt((float)AD[6]))/(AD[0]+AD[6]);
+  887   3      //      ServoDuty = Servo_Middle - circle_run_p*(input1);
+  888   3      //      Normal_handle();
+  889   3            if(cnt>=circle_run_max_cnt)
+  890   3            {
+  891   4              if(AD[6]>=circle_out_max) //判断预出环
+  892   4              {
+  893   5                Round_Process = Round_OutR ; 
+  894   5                Compensate_flag = 1;
+  895   5                //ADC_Compensate = ADC_Compensate_temp;
+  896   5                cnt_star = 1;
+  897   5                cnt = 0;
+  898   5              }
+  899   4            }
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 15  
+
+  900   3            break;
+  901   3          }
+  902   2          case Round_OutR:
+  903   2          {
+  904   3            input1 = ADC_Compensate + 10*abs_float(err_get()); //ADC_Compensate 0~10 补偿量
+  905   3            ServoDuty = Servo_Middle - pid_duoji_normal_sqrt(input1);
+  906   3            if(cnt>=circle_out_max_cnt)
+  907   3            {
+  908   4                if(AD[3]>=90)
+  909   4                {
+  910   5                  Round_Process = Round_Outover; 
+  911   5                  Compensate_flag = 0;
+  912   5                  //cnt = 0;
+  913   5                  cnt_star = 0;
+  914   5                  //cnt_star = 1;
+  915   5                  break;
+  916   5                }
+  917   4            }
+  918   3            break;
+  919   3          }
+  920   2          case Round_Outover:
+  921   2          {
+  922   3      //      if(cnt>=2000)
+  923   3      //      {
+  924   3      //        cnt = 0;
+  925   3      //        cnt_star = 0;
+  926   3      //        Position = Normal; //回到正常赛道
+  927   3      //        Normal_H = 1.0;
+  928   3      //      }
+  929   3            input1 = 10 * err_get_cross(); //差比和（差）求偏离程度
+  930   3            ServoDuty = Servo_Middle - 150*(input1);
+  931   3      //      Normal_handle();
+  932   3            if(AD[6]<=60 && AD[0]<=60 )  
+  933   3            {
+  934   4              Position = Normal; //回到正常赛道
+  935   4              Normal_H = 1.0;
+  936   4            }
+  937   3            
+  938   3            
+  939   3      //      flag_star=0;
+  940   3            break;
+  941   3          }
+  942   2        }
+  943   1      }
+  944          
+  945          void Fork_Rhandle(void)//右三岔处理
+  946          {
+  947   1        switch(Fork_Process)
+  948   1        {
+  949   2          case Fork_Ining:
+  950   2          {
+  951   3            input1 = 10*(float)(sqrt((float)AD[9])-0)/(AD[9]+AD[8]);
+  952   3            ServoDuty = Servo_Middle - fork_turn*(input1);
+  953   3            if(cnt>=fork_cnt_max)                //(AD[0]<=60 && AD[6]<=20 && AD[3]>=70) AD[8]+AD[9]<=150
+  954   3            {
+  955   4              cnt_star = 0;
+  956   4              cnt = 0;
+  957   4              Fork_Process = Forking;
+  958   4              GoalPulseLL = Speed_target;
+  959   4              GoalPulseRR = Speed_target;
+  960   4            }
+  961   3            break;
+  962   3          }
+  963   2          case Forking:
+  964   2          {
+  965   3            //右岔路循迹
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 16  
+
+  966   3            //Normal_handle();
+  967   3            input1 = 10 * err_get(); //差比和（差）求偏离程度
+  968   3            ServoDuty = Servo_Middle - pid_duoji_normal_sqrt(input1);
+  969   3            if(AD[0]>=73) //判断出口
+  970   3            {
+  971   4              Fork_Process = Forkouting;
+  972   4              count=0;
+  973   4            }
+  974   3            break;
+  975   3          }
+  976   2          case Forkouting:
+  977   2          {
+  978   3      //      ServoDuty = Servo_Middle -FORK_OutServo;
+  979   3            input1 = 10*(float)(sqrt((float)AD[9])-0)/(AD[9]+AD[8]);
+  980   3            ServoDuty = Servo_Middle - fork_turn*(input1);
+  981   3            if(AD[3]>=85) {
+  982   4              GoalPulseLL = Speed_target;
+  983   4              GoalPulseRR = Speed_target;
+  984   4              Fork_Process = Forkoutover; //判断出岔路
+  985   4              Position = Normal;
+  986   4            }
+  987   3            break;
+  988   3          }
+  989   2          case Forkoutover:
+  990   2          {
+  991   3            Position = Normal;
+  992   3            Normal_handle();
+  993   3            break;
+  994   3          }
+  995   2        }
+  996   1      }
+  997          void Fork_Lhandle(void)//左三岔处理
+  998          {
+  999   1        switch(Fork_Process)
+ 1000   1        {
+ 1001   2          case Fork_Ining:
+ 1002   2          {
+ 1003   3            input1 = 10*(float)(0-sqrt((float)AD[8]))/(AD[9]+AD[8]);
+ 1004   3            ServoDuty = Servo_Middle - fork_turn*(input1);
+ 1005   3            if(cnt>=fork_cnt_max)                //(AD[0]<=60 && AD[6]<=20 && AD[3]>=70)   AD[8]+AD[9]<=150
+ 1006   3            {
+ 1007   4                cnt_star = 0;
+ 1008   4                cnt = 0;
+ 1009   4                Fork_Process = Forking;
+ 1010   4                GoalPulseLL = Speed_target;
+ 1011   4                GoalPulseRR = Speed_target;
+ 1012   4                if(match==1)
+ 1013   4                {
+ 1014   5                  cnt_star = 1;
+ 1015   5                  cnt = 0;
+ 1016   5                }
+ 1017   4            }
+ 1018   3            break;
+ 1019   3          }
+ 1020   2          case Forking:
+ 1021   2          {
+ 1022   3      //      input1 = 10 * (float)(sqrt((float)AD[7])-sqrt((float)AD[8]))/(AD[7]+AD[8]);
+ 1023   3      //      ServoDuty = Servo_Middle - pid_duoji_fork(input1);
+ 1024   3            if(match==1)  
+ 1025   3            {
+ 1026   4              if(cnt>=6000) 
+ 1027   4              {
+ 1028   5                //flag_star = 0;
+ 1029   5                GoalPulseLL = 0;
+ 1030   5                GoalPulseRR = 0;
+ 1031   5                cnt = 0;
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 17  
+
+ 1032   5                cnt_star = 0;
+ 1033   5              }
+ 1034   4            }       
+ 1035   3            Normal_handle();
+ 1036   3            if(AD[6]>=75)  //判断出口
+ 1037   3            {  
+ 1038   4              Fork_Process = Forkouting;
+ 1039   4              count = 1;
+ 1040   4            }
+ 1041   3            break;
+ 1042   3          }
+ 1043   2          case Forkouting:
+ 1044   2          {
+ 1045   3      //    ServoDuty = Servo_Middle +FORK_OutServo;
+ 1046   3            input1 = 10*(float)(0-sqrt((float)AD[8]))/(AD[9]+AD[8]);
+ 1047   3            ServoDuty = Servo_Middle - fork_turn*(input1);
+ 1048   3            if(AD[3]>=85) {
+ 1049   4              Fork_Process = Forkoutover; //判断出岔路
+ 1050   4              GoalPulseLL = Speed_target;
+ 1051   4              GoalPulseRR = Speed_target;
+ 1052   4              Position = Normal;
+ 1053   4            }
+ 1054   3            break;
+ 1055   3          }
+ 1056   2          case Forkoutover:
+ 1057   2          {
+ 1058   3            Normal_handle();
+ 1059   3            Position = Normal;
+ 1060   3            break;
+ 1061   3          }
+ 1062   2        }
+ 1063   1      }
+ 1064          
+ 1065          void Cross_handle(void)//十字处理
+ 1066          {
+ 1067   1        static int out_state;//丢线状态位
+ 1068   1        switch(Cross_Process)
+ 1069   1        {
+ 1070   2          case Crossing:
+ 1071   2          {
+ 1072   3            //直走
+ 1073   3            input1 = 10 * err_get_cross(); //差比和（差）求偏离程度
+ 1074   3            //input1 = err_get_b(0.8,0.2);
+ 1075   3            ServoDuty = Servo_Middle - 150*(input1);
+ 1076   3            //Normal_handle();
+ 1077   3            if(AD[3]<cross1_in_max&&cross_cnt==1)
+ 1078   3            {
+ 1079   4              Cross_Process = Cross_In;
+ 1080   4            }
+ 1081   3            else if(AD[3]<cross2_in_max&&cross_cnt==2)
+ 1082   3            {
+ 1083   4              Cross_Process = Cross_In;
+ 1084   4            }
+ 1085   3            break;
+ 1086   3          }
+ 1087   2          case Cross_In:
+ 1088   2          {
+ 1089   3            if(cnt>=cross_cnt_max)
+ 1090   3            {
+ 1091   4                //走一段路程再进行出十字判断
+ 1092   4                if((AD[0]+AD[3]+AD[6])>=Cross_sum-20)
+ 1093   4                {
+ 1094   5                  Cross_Process = Crossover;
+ 1095   5                  cnt_star = 1;
+ 1096   5                  cnt = 0;
+ 1097   5                }
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 18  
+
+ 1098   4                input1 = err_in_cross();
+ 1099   4                ServoDuty = Servo_Middle - cross_run_p*(input1);
+ 1100   4            }
+ 1101   3            else//正常循迹
+ 1102   3            {
+ 1103   4              //input1 = err_get_f(Cross_H,1-Cross_H);
+ 1104   4              input1 = err_in_cross();
+ 1105   4              ServoDuty = Servo_Middle - cross_run_p*(input1);
+ 1106   4      //        if(AD[3]<=20)//丢线处理
+ 1107   4      //        {
+ 1108   4      //          ServoDuty = Servo_Middle - 2*cross_run_p*((float)(AD[9]-AD[8])/(float)(AD[8]+AD[9]));
+ 1109   4      //        }
+ 1110   4            }
+ 1111   3            //十字内丢线处理
+ 1112   3            if(AD[9]>=30&&AD[3]<=15&&AD[2]<=15&&AD[4]<=15)//前瞻往左偏出赛道
+ 1113   3            {
+ 1114   4              out_state = 1;
+ 1115   4              Cross_Process = Cross_duixian;
+ 1116   4            }
+ 1117   3            if(AD[8]>=30&&AD[3]<=15&&AD[2]<=15&&AD[4]<=15)//前瞻往右偏出赛道
+ 1118   3            {
+ 1119   4              out_state = 2;
+ 1120   4              Cross_Process = Cross_duixian;
+ 1121   4            }
+ 1122   3            
+ 1123   3            
+ 1124   3            break;
+ 1125   3          }
+ 1126   2          case Cross_duixian:
+ 1127   2          {
+ 1128   3      
+ 1129   3            if(out_state==1)
+ 1130   3            {
+ 1131   4              ServoDuty = Servo_Left_Max;
+ 1132   4              if(AD[3]>=30&&AD[2]>=30&&AD[4]>=30)
+ 1133   4              Cross_Process = Cross_In;
+ 1134   4            }
+ 1135   3            else if(out_state==2)
+ 1136   3            {
+ 1137   4              ServoDuty = Servo_Right_Min;
+ 1138   4              if(AD[3]>=30&&AD[2]>=30&&AD[4]>=30)
+ 1139   4              Cross_Process = Cross_In;
+ 1140   4            }
+ 1141   3      //      if((AD[0]+AD[6]+AD[3])>=Cross_sum-20)
+ 1142   3      //      {
+ 1143   3      //        Cross_Process = Crossover;
+ 1144   3      //        cnt_star = 1;
+ 1145   3      //        cnt = 0;
+ 1146   3      //      }
+ 1147   3              break;
+ 1148   3            
+ 1149   3        }
+ 1150   2          case Crossover:
+ 1151   2          {
+ 1152   3            if(cnt>=7000)
+ 1153   3            {
+ 1154   4              cnt_star = 0;
+ 1155   4              cnt = 0;
+ 1156   4              Position = Normal;
+ 1157   4              Normal_H    = 0.8;
+ 1158   4              if(cross_cnt==2) 
+ 1159   4              {
+ 1160   5                cnt_star = 1;
+ 1161   5      //          GoalPulseLL = 0;
+ 1162   5      //          GoalPulseRR = 0;
+ 1163   5                
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 19  
+
+ 1164   5              }
+ 1165   4            }
+ 1166   3            input1 = 10 * err_get_cross(); //差比和（差）求偏离程度
+ 1167   3            ServoDuty = Servo_Middle - 200*(input1);
+ 1168   3            
+ 1169   3            break;
+ 1170   3          }
+ 1171   2        }
+ 1172   1      }
+ 1173          void Descent_handle(void)//坡道处理
+ 1174          {
+ 1175   1        switch(Descent_Process)
+ 1176   1        {
+ 1177   2          case Descenting:
+ 1178   2          {
+ 1179   3            GoalPulseLL = Speed_target + Descent_Speedadd;
+ 1180   3            GoalPulseRR = Speed_target + Descent_Speedadd;
+ 1181   3            Normal_handle();
+ 1182   3            if(AD[3]<=92&&AD[3]>85)
+ 1183   3            {
+ 1184   4              Descent_Process = Descentovering;
+ 1185   4      //        GoalPulseLL = Speed_target;
+ 1186   4      //        GoalPulseRR = Speed_target;
+ 1187   4            }
+ 1188   3            if(AD[3]<=80) 
+ 1189   3            {
+ 1190   4              Position = Normal;
+ 1191   4              GoalPulseLL = Speed_target;
+ 1192   4              GoalPulseRR = Speed_target;
+ 1193   4            }
+ 1194   3            break;
+ 1195   3          }
+ 1196   2          case Descentovering:
+ 1197   2          {
+ 1198   3      
+ 1199   3            Normal_handle();
+ 1200   3            if(AD[3]>96)
+ 1201   3            {
+ 1202   4              Descent_Process = Descentover;
+ 1203   4              GoalPulseLL = Speed_target;
+ 1204   4              GoalPulseRR = Speed_target;
+ 1205   4            }
+ 1206   3            if(AD[3]<=80) 
+ 1207   3            {
+ 1208   4              Position = Normal;
+ 1209   4              GoalPulseLL = Speed_target;
+ 1210   4              GoalPulseRR = Speed_target;
+ 1211   4            }
+ 1212   3            break;
+ 1213   3          }
+ 1214   2          case Descentover:
+ 1215   2          {
+ 1216   3            Normal_handle();
+ 1217   3            if(AD[3]<=92)  Position = Normal;
+ 1218   3            break;
+ 1219   3          }
+ 1220   2        }
+ 1221   1      }
+ 1222          
+ 1223          
+ 1224          uint8 key_read()
+ 1225          {
+ 1226   1        if(!P32) return 1;
+ 1227   1        else if(!P33) return 2;
+ 1228   1        else if(!P45) return 3;
+ 1229   1        else if(!P46) return 4;
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 20  
+
+ 1230   1        else if(!P53) return 5;
+ 1231   1        else return 0;
+ 1232   1      }
+ 1233          char txt[40];
+ 1234          uint32 clkk = 0;
+ 1235          void view_0_handle(void)
+ 1236          {
+ 1237   1        static uint16 ch =0;
+ 1238   1        
+ 1239   1        sprintf(txt,"Target:%d               ",Speed_target);
+ 1240   1        lcd_showstr_simspi(0,0,(char*)txt);
+ 1241   1        sprintf(txt,"Match:%1d               ",match);
+ 1242   1        lcd_showstr_simspi(0,1,(char*)txt);
+ 1243   1        sprintf(txt,"normal_kd:%d            ",duojikd_normal_sqrt);
+ 1244   1        lcd_showstr_simspi(0,2,(char*)txt);
+ 1245   1        sprintf(txt,"fork_flag:%d           ",fork_flag);
+ 1246   1        lcd_showstr_simspi(0,3,(char*)txt);
+ 1247   1        sprintf(txt,"ADC_get:%1d    %d       ",adc_get,beishu);
+ 1248   1        lcd_showstr_simspi(0,4,(char*)txt);
+ 1249   1        sprintf(txt,"chashu_flag:%1d              ",chashu_flag);
+ 1250   1        lcd_showstr_simspi(0,5,(char*)txt);
+ 1251   1        sprintf(txt,"chashu:%f              ",chashu);
+ 1252   1        lcd_showstr_simspi(0,6,(char*)txt);
+ 1253   1        sprintf(txt,"cin_max_left:%d            ",circle_in_max_left);
+ 1254   1        lcd_showstr_simspi(0,7,(char*)txt);
+ 1255   1        lcd_showchar_simspi(150,(ch)*16,'<');
+ 1256   1        switch(key_read())
+ 1257   1        {
+ 1258   2          case 1 :
+ 1259   2          {
+ 1260   3            view++;
+ 1261   3            //保存信息
+ 1262   3            at24c02_write_byte(0,adc_get);
+ 1263   3            at24c02_write_byte(1,match);
+ 1264   3            at24c02_write_uint16(24,Speed_target);
+ 1265   3            at24c02_write_uint16(54,circle_in_max_left);
+ 1266   3            at24c02_write_uint16(28,duojikd_normal_sqrt);
+ 1267   3            at24c02_write_byte(46,chashu_flag);
+ 1268   3            at24c02_write_byte(60,chashu*10);
+ 1269   3            at24c02_write_byte(51,fork_flag);
+ 1270   3            lcd_clear_simspi(BLACK);
+ 1271   3            break;
+ 1272   3          }
+ 1273   2          case 2 :
+ 1274   2          {
+ 1275   3            ch++;
+ 1276   3            if(ch== 8) ch = 0;
+ 1277   3            break;
+ 1278   3          }
+ 1279   2          case 3 :
+ 1280   2          {
+ 1281   3            //增加
+ 1282   3            switch(ch)
+ 1283   3            {
+ 1284   4              case 0:
+ 1285   4              {
+ 1286   5                Speed_target+=beishu;
+ 1287   5                break;
+ 1288   5              }
+ 1289   4              case 1:
+ 1290   4              {
+ 1291   5                match++;
+ 1292   5                if(match>1) match=1;
+ 1293   5                break;
+ 1294   5              }
+ 1295   4              case 2:
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 21  
+
+ 1296   4              {
+ 1297   5                duojikd_normal_sqrt+=beishu;
+ 1298   5                break;
+ 1299   5              }
+ 1300   4              case 3:
+ 1301   4              {
+ 1302   5                fork_flag++;
+ 1303   5                if(fork_flag>1) fork_flag = 1;
+ 1304   5                break;
+ 1305   5              }
+ 1306   4              case 4:
+ 1307   4              {
+ 1308   5                adc_get++;
+ 1309   5                if(adc_get>1) adc_get=1;
+ 1310   5                break; 
+ 1311   5              }
+ 1312   4              case 5:
+ 1313   4              {
+ 1314   5                chashu_flag++;
+ 1315   5                if(chashu_flag>1) chashu_flag=1;
+ 1316   5                break;
+ 1317   5              }
+ 1318   4              case 6:
+ 1319   4              {
+ 1320   5                chashu+=0.1;
+ 1321   5                break;
+ 1322   5              }
+ 1323   4              case 7:
+ 1324   4              {
+ 1325   5                circle_in_max_left+=beishu;
+ 1326   5                break;
+ 1327   5              }
+ 1328   4            }
+ 1329   3            break;
+ 1330   3          }
+ 1331   2          case 4 :
+ 1332   2          {
+ 1333   3            //减少
+ 1334   3            switch(ch)
+ 1335   3            {
+ 1336   4              case 0:
+ 1337   4              {
+ 1338   5                Speed_target-=beishu;
+ 1339   5                break;
+ 1340   5              }
+ 1341   4              case 1:
+ 1342   4              {
+ 1343   5                match--;
+ 1344   5                if(match<0) match =0;
+ 1345   5                break;
+ 1346   5              }
+ 1347   4              case 2:
+ 1348   4              {
+ 1349   5                duojikd_normal_sqrt-=beishu;
+ 1350   5                break;
+ 1351   5              }
+ 1352   4              case 3:
+ 1353   4              {
+ 1354   5                fork_flag--;
+ 1355   5                if(fork_flag<0) fork_flag = 0;
+ 1356   5                break;
+ 1357   5              }
+ 1358   4              case 4:
+ 1359   4              {
+ 1360   5                adc_get--;
+ 1361   5                if(adc_get<0) adc_get = 0;
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 22  
+
+ 1362   5                break;
+ 1363   5              }
+ 1364   4              case 5:
+ 1365   4              {
+ 1366   5                chashu_flag--;
+ 1367   5                if(chashu_flag<0) chashu_flag=0;
+ 1368   5                break;
+ 1369   5              }
+ 1370   4              case 6:
+ 1371   4              {
+ 1372   5                chashu -= 0.1;
+ 1373   5                break;
+ 1374   5              }
+ 1375   4              case 7:
+ 1376   4              {
+ 1377   5                circle_in_max_left-=beishu;
+ 1378   5                break;
+ 1379   5              }
+ 1380   4            }
+ 1381   3            break;
+ 1382   3          }
+ 1383   2          
+ 1384   2          case 5 :
+ 1385   2          {
+ 1386   3            beishu *= 10;
+ 1387   3            if(beishu==1000) beishu = 1;
+ 1388   3            break;
+ 1389   3          }
+ 1390   2          
+ 1391   2        }
+ 1392   1      }
+ 1393          void view_1_handle(void)
+ 1394          {
+ 1395   1      
+ 1396   1        static uint16 ch =0;
+ 1397   1        int16 flag = 0;
+ 1398   1        int16 i = 0;
+ 1399   1          
+ 1400   1        sprintf(txt,"duojikp_normal:%d        ",duojikp_normal_sqrt);
+ 1401   1        lcd_showstr_simspi(0,0,(char*)txt);
+ 1402   1        sprintf(txt,"fork_turn:%d         ",fork_turn);
+ 1403   1        lcd_showstr_simspi(0,1,(char*)txt);
+ 1404   1        sprintf(txt,"cross1_in_max:%d         ",cross1_in_max);
+ 1405   1        lcd_showstr_simspi(0,2,(char*)txt);
+ 1406   1        sprintf(txt,"cross2_in_max:%d         ",cross2_in_max);
+ 1407   1        lcd_showstr_simspi(0,3,(char*)txt);
+ 1408   1        sprintf(txt,"cross_run_p:%d           ",cross_run_p);
+ 1409   1        lcd_showstr_simspi(0,4,(char*)txt);
+ 1410   1        sprintf(txt,"cir_in_max_right:%d         ",circle_in_max_right);
+ 1411   1        lcd_showstr_simspi(0,5,(char*)txt);
+ 1412   1        sprintf(txt,"circle_run_p:%d  %d       ",circle_run_p,beishu);
+ 1413   1        lcd_showstr_simspi(0,6,(char*)txt);
+ 1414   1        sprintf(txt,"ADC_Compensate:%.2f        ",ADC_Compensate);
+ 1415   1        lcd_showstr_simspi(0,7,(char*)txt);
+ 1416   1        lcd_showchar_simspi(150,(ch)*16,'<');
+ 1417   1        switch(key_read())
+ 1418   1        {
+ 1419   2          case 1 :
+ 1420   2          {
+ 1421   3            view++;
+ 1422   3            for(i = 0;i<8;i++)
+ 1423   3            {
+ 1424   4              if(Speed_target==120+5*i)
+ 1425   4              {
+ 1426   5                 at24c02_write_uint16(79+2*i,duojikp_normal_sqrt);
+*** WARNING C188 IN LINE 1426 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 23  
+
+ 1427   5                 at24c02_write_uint16(95+2*i,fork_turn);
+*** WARNING C188 IN LINE 1427 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+ 1428   5                 at24c02_write_uint16(111+2*i,cross_run_p);
+*** WARNING C188 IN LINE 1428 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+ 1429   5                 at24c02_write_uint16(127+2*i,cross1_in_max);
+*** WARNING C188 IN LINE 1429 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+ 1430   5                 at24c02_write_uint16(143+2*i,cross2_in_max);
+*** WARNING C188 IN LINE 1430 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+ 1431   5                 at24c02_write_uint16(159+2*i,circle_in_max_right);
+*** WARNING C188 IN LINE 1431 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+ 1432   5                 at24c02_write_uint16(175+2*i,(int)(ADC_Compensate*100));
+*** WARNING C188 IN LINE 1432 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+ 1433   5                 at24c02_write_uint16(191+2*i,circle_run_p);
+*** WARNING C188 IN LINE 1433 OF ..\USER\src\isr.c: 'parameter 1': value truncated
+ 1434   5                 flag = 1;
+ 1435   5                 break;
+ 1436   5              }
+ 1437   4              
+ 1438   4              //at24c02_write_uint16(175+2*i,(int)(0*100));
+ 1439   4            }
+ 1440   3            if(flag == 0)
+ 1441   3            {
+ 1442   4              at24c02_write_uint16(26,duojikp_normal_sqrt);
+ 1443   4              at24c02_write_uint16(44,fork_turn);
+ 1444   4              at24c02_write_uint16(34,cross_run_p);
+ 1445   4              at24c02_write_uint16(32,cross1_in_max);
+ 1446   4              at24c02_write_uint16(34,cross2_in_max);
+ 1447   4              at24c02_write_uint16(56,circle_in_max_right);
+ 1448   4              at24c02_write_uint16(61,ADC_Compensate*100);
+ 1449   4              at24c02_write_uint16(52,circle_run_p);
+ 1450   4            }
+ 1451   3            //保存信息
+ 1452   3            lcd_clear_simspi(BLACK);
+ 1453   3            break;
+ 1454   3          }
+ 1455   2          case 2 :
+ 1456   2          {
+ 1457   3            ch++;
+ 1458   3            if(ch== 8) ch = 0;
+ 1459   3            break;
+ 1460   3          }
+ 1461   2          case 3 :
+ 1462   2          {
+ 1463   3            //增加
+ 1464   3            switch(ch)
+ 1465   3            {
+ 1466   4              case 0:
+ 1467   4              {
+ 1468   5                duojikp_normal_sqrt += beishu;    //(beishu/100.0);
+ 1469   5                break;
+ 1470   5              }
+ 1471   4              case 1:
+ 1472   4              {
+ 1473   5                fork_turn += (beishu);  
+ 1474   5                break;
+ 1475   5              }
+ 1476   4              case 2:
+ 1477   4              {
+ 1478   5                cross1_in_max += beishu;
+ 1479   5                break;
+ 1480   5              }
+ 1481   4              case 3:
+ 1482   4              {
+ 1483   5                cross2_in_max += beishu;
+ 1484   5                break;
+ 1485   5              }
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 24  
+
+ 1486   4              case 4:
+ 1487   4              {
+ 1488   5                cross_run_p += beishu;
+ 1489   5                break;
+ 1490   5              }
+ 1491   4              case 5:
+ 1492   4              {
+ 1493   5                circle_in_max_right += beishu;
+ 1494   5                break;
+ 1495   5              }
+ 1496   4              case 6:
+ 1497   4              {
+ 1498   5                circle_run_p += (beishu);
+ 1499   5                break;
+ 1500   5              }
+ 1501   4              case 7:
+ 1502   4              {
+ 1503   5                ADC_Compensate += (beishu/100.0);
+ 1504   5                break;
+ 1505   5              }
+ 1506   4            }
+ 1507   3            break;
+ 1508   3          }
+ 1509   2          case 4 :
+ 1510   2          {
+ 1511   3            //减少
+ 1512   3                  switch(ch)
+ 1513   3            {
+ 1514   4              case 0:
+ 1515   4              {
+ 1516   5                duojikp_normal_sqrt -= beishu;    //(beishu/100.0);
+ 1517   5                break;
+ 1518   5              }
+ 1519   4              case 1:
+ 1520   4              {
+ 1521   5                fork_turn -= (beishu);  
+ 1522   5                break;
+ 1523   5              }
+ 1524   4              case 2:
+ 1525   4              {
+ 1526   5                cross1_in_max -= beishu;
+ 1527   5                break;
+ 1528   5              }
+ 1529   4              case 3:
+ 1530   4              {
+ 1531   5                cross2_in_max -= beishu;
+ 1532   5                break;
+ 1533   5              }
+ 1534   4              case 4:
+ 1535   4              {
+ 1536   5                cross_run_p -= beishu;
+ 1537   5                break;
+ 1538   5              }
+ 1539   4              case 5:
+ 1540   4              {
+ 1541   5                circle_in_max_right -= beishu;
+ 1542   5                break;
+ 1543   5              }
+ 1544   4              case 6:
+ 1545   4              {
+ 1546   5                circle_run_p -= (beishu);
+ 1547   5                break;
+ 1548   5              }
+ 1549   4              case 7:
+ 1550   4              {
+ 1551   5                ADC_Compensate -= (beishu/100.0);
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 25  
+
+ 1552   5                break;
+ 1553   5              }
+ 1554   4            }
+ 1555   3            break;
+ 1556   3          }
+ 1557   2          case 5 :
+ 1558   2          {
+ 1559   3            beishu *= 10;
+ 1560   3            if(beishu==1000) beishu = 1;
+ 1561   3            break;
+ 1562   3          }
+ 1563   2          
+ 1564   2        }
+ 1565   1      }
+ 1566          void view_2_handle(void)
+ 1567          {
+ 1568   1        static uint16 ch =0;
+ 1569   1        sprintf(txt,"Circle_H:%.2f        ",Circle_H);
+ 1570   1        lcd_showstr_simspi(0,0,(char*)txt);
+ 1571   1        sprintf(txt,"Cross_H:%.2f         ",Cross_H);
+ 1572   1        lcd_showstr_simspi(0,1,(char*)txt);
+ 1573   1        sprintf(txt,"circle_out_max:%d           ",circle_out_max);
+ 1574   1        lcd_showstr_simspi(0,2,(char*)txt);
+ 1575   1        sprintf(txt,"fork_mid_max:%d            ",fork_mid_max);
+ 1576   1        lcd_showstr_simspi(0,3,(char*)txt);
+ 1577   1        sprintf(txt,"fork_mid_min:%d            ",fork_mid_min);
+ 1578   1        lcd_showstr_simspi(0,4,(char*)txt);
+ 1579   1        sprintf(txt,"fork_side_max:%d           ",fork_side_max);
+ 1580   1        lcd_showstr_simspi(0,5,(char*)txt);
+ 1581   1        sprintf(txt,"fork_side_min:%d           ",fork_side_min);
+ 1582   1        lcd_showstr_simspi(0,6,(char*)txt);
+ 1583   1        sprintf(txt,"cross2_out:%.2f        ",cross2_out);//阈值
+ 1584   1        lcd_showstr_simspi(0,7,(char*)txt);
+ 1585   1        lcd_showchar_simspi(150,(ch)*16,'<');
+ 1586   1        
+ 1587   1        switch(key_read())
+ 1588   1        {
+ 1589   2          case 1 :
+ 1590   2          {
+ 1591   3            view++;
+ 1592   3            //保存信息  
+ 1593   3            at24c02_write_uint16(36,Circle_H*100);
+ 1594   3            at24c02_write_uint16(30,Cross_H*100);
+ 1595   3            at24c02_write_uint16(58,circle_out_max);
+ 1596   3            at24c02_write_uint16(65,fork_mid_max);
+ 1597   3            at24c02_write_uint16(67,fork_mid_min);
+ 1598   3            at24c02_write_uint16(69,fork_side_max);
+ 1599   3            at24c02_write_uint16(71,fork_side_min);
+ 1600   3            at24c02_write_uint16(42,cross2_out*100);
+ 1601   3            lcd_clear_simspi(BLACK);
+ 1602   3            break;
+ 1603   3          }
+ 1604   2          case 2 :
+ 1605   2          {
+ 1606   3            ch++;
+ 1607   3            if(ch==8) ch = 0;
+ 1608   3            break;
+ 1609   3          }
+ 1610   2          case 3 :
+ 1611   2          {
+ 1612   3            //增加
+ 1613   3            switch(ch)
+ 1614   3            {
+ 1615   4              case 0:
+ 1616   4              {
+ 1617   5                Circle_H += (beishu/100.0);
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 26  
+
+ 1618   5                break;
+ 1619   5              }
+ 1620   4              case 1:
+ 1621   4              {
+ 1622   5                Cross_H += (beishu/100.0);
+ 1623   5                break;
+ 1624   5              }
+ 1625   4              case 2:
+ 1626   4              {
+ 1627   5                circle_out_max += beishu;
+ 1628   5                break;
+ 1629   5              }
+ 1630   4              case 3:
+ 1631   4              {
+ 1632   5                fork_mid_max += beishu;
+ 1633   5                break;
+ 1634   5              }
+ 1635   4              case 4:
+ 1636   4              {
+ 1637   5                fork_mid_min += beishu;
+ 1638   5                break;
+ 1639   5              }
+ 1640   4              case 5:
+ 1641   4              {
+ 1642   5                fork_side_max += beishu;
+ 1643   5                break;
+ 1644   5              }
+ 1645   4              case 6:
+ 1646   4              {
+ 1647   5                fork_side_min += beishu;
+ 1648   5                break;
+ 1649   5              }
+ 1650   4              case 7:
+ 1651   4              {
+ 1652   5                cross2_out += (beishu/100.0);
+ 1653   5                break;
+ 1654   5              }
+ 1655   4            }
+ 1656   3            break;
+ 1657   3          }
+ 1658   2          case 4 :
+ 1659   2          {
+ 1660   3            //减少
+ 1661   3            switch(ch)
+ 1662   3            {
+ 1663   4              case 0:
+ 1664   4              {
+ 1665   5                Circle_H -= (beishu/100.0);
+ 1666   5                break;
+ 1667   5              }
+ 1668   4              case 1:
+ 1669   4              {
+ 1670   5                Cross_H -= (beishu/100.0);
+ 1671   5                break;
+ 1672   5              }
+ 1673   4              case 2:
+ 1674   4              {
+ 1675   5                circle_out_max -= beishu;
+ 1676   5                break;
+ 1677   5              }
+ 1678   4              case 3:
+ 1679   4              {
+ 1680   5                fork_mid_max -= beishu;
+ 1681   5                break;
+ 1682   5              }
+ 1683   4              case 4:
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 27  
+
+ 1684   4              {
+ 1685   5                fork_mid_min -= beishu;
+ 1686   5                break;
+ 1687   5              }
+ 1688   4              case 5:
+ 1689   4              {
+ 1690   5                fork_side_max -= beishu;
+ 1691   5                break;
+ 1692   5              }
+ 1693   4              case 6:
+ 1694   4              {
+ 1695   5                fork_side_min -= beishu;
+ 1696   5                break;
+ 1697   5              }
+ 1698   4              case 7:
+ 1699   4              {
+ 1700   5                cross2_out -= (beishu/100.0);
+ 1701   5                break;
+ 1702   5              }
+ 1703   4            }
+ 1704   3            break;
+ 1705   3          }
+ 1706   2          case 5 :
+ 1707   2          {
+ 1708   3            beishu *= 10;
+ 1709   3            if(beishu==1000) beishu = 1;
+ 1710   3            break;
+ 1711   3          }
+ 1712   2          
+ 1713   2        }
+ 1714   1      }
+ 1715          void view_3_handle(void)
+ 1716          {
+ 1717   1        static uint16 ch =0;
+ 1718   1        sprintf(txt,"Cross_sum:%d               ",Cross_sum);
+ 1719   1        lcd_showstr_simspi(0,0,(char*)txt);
+ 1720   1        sprintf(txt,"cir_bef_cnt:%d               ",circle_before_cnt);
+ 1721   1        lcd_showstr_simspi(0,1,(char*)txt);
+ 1722   1        sprintf(txt,"cir_in_cnt:%d               ",circle_in_cnt);
+ 1723   1        lcd_showstr_simspi(0,2,(char*)txt);
+ 1724   1        sprintf(txt,"fork_cnt_max:%d           ",fork_cnt_max);
+ 1725   1        lcd_showstr_simspi(0,3,(char*)txt);
+ 1726   1        sprintf(txt,"cross_cnt_max:%d         ",cross_cnt_max);
+ 1727   1        lcd_showstr_simspi(0,4,(char*)txt);
+ 1728   1        sprintf(txt,"cir_run_cnt:%d           ",circle_run_max_cnt);
+ 1729   1        lcd_showstr_simspi(0,5,(char*)txt);
+ 1730   1        sprintf(txt,"cir_out_cnt:%d           ",circle_out_max_cnt);
+ 1731   1        lcd_showstr_simspi(0,6,(char*)txt);
+ 1732   1        sprintf(txt,"circle_max:%d %d          ",circle_max,beishu);
+ 1733   1        lcd_showstr_simspi(0,7,(char*)txt);
+ 1734   1        lcd_showchar_simspi(150,(ch)*16,'<');
+ 1735   1        switch(key_read())
+ 1736   1        {
+ 1737   2          case 1 :
+ 1738   2          {
+ 1739   3            view++;
+ 1740   3            //保存信息    
+ 1741   3            at24c02_write_uint16(63,Cross_sum);
+ 1742   3            at24c02_write_uint16(47,circle_before_cnt);
+ 1743   3            at24c02_write_uint16(49,circle_in_cnt);
+ 1744   3            at24c02_write_uint16(38,fork_cnt_max);
+ 1745   3            at24c02_write_uint16(40,cross_cnt_max);
+ 1746   3            at24c02_write_uint16(73,circle_run_max_cnt);
+ 1747   3            at24c02_write_uint16(75,circle_out_max_cnt);
+ 1748   3            at24c02_write_uint16(77,circle_max);
+ 1749   3            lcd_clear_simspi(BLACK);
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 28  
+
+ 1750   3            break;
+ 1751   3          }
+ 1752   2          case 2 :
+ 1753   2          {
+ 1754   3            ch++;
+ 1755   3            if(ch== 8) ch = 0;
+ 1756   3            break;
+ 1757   3          }
+ 1758   2          case 3 :
+ 1759   2          {
+ 1760   3            //增加
+ 1761   3            switch(ch)
+ 1762   3            {
+ 1763   4              case 0:
+ 1764   4              {
+ 1765   5                Cross_sum+=beishu;
+ 1766   5                break;
+ 1767   5              }
+ 1768   4              case 1:
+ 1769   4              {
+ 1770   5                circle_before_cnt+=beishu;
+ 1771   5                break;
+ 1772   5              }
+ 1773   4              case 2:
+ 1774   4              {
+ 1775   5                circle_in_cnt+=beishu;
+ 1776   5                break;
+ 1777   5              }
+ 1778   4              case 3:
+ 1779   4              {
+ 1780   5                fork_cnt_max+=beishu;
+ 1781   5                break;
+ 1782   5              }
+ 1783   4              case 4:
+ 1784   4              {
+ 1785   5                cross_cnt_max+=beishu;
+ 1786   5                break;
+ 1787   5              }
+ 1788   4              case 5:
+ 1789   4              {
+ 1790   5                circle_run_max_cnt+=beishu;
+ 1791   5                break;
+ 1792   5              }
+ 1793   4              case 6:
+ 1794   4              {
+ 1795   5                circle_out_max_cnt+=beishu;
+ 1796   5                break;
+ 1797   5              }
+ 1798   4              case 7:
+ 1799   4              {
+ 1800   5                circle_max+=beishu;
+ 1801   5              }
+ 1802   4            }
+ 1803   3            
+ 1804   3            break;
+ 1805   3          }
+ 1806   2          case 4 :
+ 1807   2          {
+ 1808   3            //减少
+ 1809   3            switch(ch)
+ 1810   3            {
+ 1811   4              case 0:
+ 1812   4              {
+ 1813   5                Cross_sum-=beishu;
+ 1814   5                break;
+ 1815   5              }
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 29  
+
+ 1816   4              case 1:
+ 1817   4              {
+ 1818   5                circle_before_cnt-=beishu;
+ 1819   5                break;
+ 1820   5              }
+ 1821   4              case 2:
+ 1822   4              {
+ 1823   5                circle_in_cnt-=beishu;
+ 1824   5                break;
+ 1825   5              }
+ 1826   4              case 3:
+ 1827   4              {
+ 1828   5                fork_cnt_max-=beishu;
+ 1829   5                break;
+ 1830   5              }
+ 1831   4              case 4:
+ 1832   4              {
+ 1833   5                cross_cnt_max-=beishu;
+ 1834   5                break;
+ 1835   5              }
+ 1836   4              case 5:
+ 1837   4              {
+ 1838   5                circle_run_max_cnt-=beishu;
+ 1839   5                break;
+ 1840   5              }
+ 1841   4              case 6:
+ 1842   4              {
+ 1843   5                circle_out_max_cnt-=beishu;
+ 1844   5                break;
+ 1845   5              }
+ 1846   4              case 7:
+ 1847   4              {
+ 1848   5                circle_max-=beishu;
+ 1849   5              }
+ 1850   4            }
+ 1851   3            break;
+ 1852   3          }
+ 1853   2          case 5 :
+ 1854   2          {
+ 1855   3            beishu *= 10;
+ 1856   3            if(beishu==10000) beishu = 1;
+ 1857   3            break;
+ 1858   3          }
+ 1859   2          
+ 1860   2        }
+ 1861   1      }
+ 1862          void TFTLCD_show(void)//显示数据
+ 1863          {
+ 1864   1        
+ 1865   1        switch(view)
+ 1866   1        {
+ 1867   2          case 0:
+ 1868   2          {
+ 1869   3            view_0_handle();
+ 1870   3            break;
+ 1871   3          }
+ 1872   2          case 1:
+ 1873   2          {
+ 1874   3            view_1_handle();
+ 1875   3            break;
+ 1876   3          }
+ 1877   2          case 2:
+ 1878   2          {
+ 1879   3            view_2_handle();
+ 1880   3            break;
+ 1881   3          }
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 30  
+
+ 1882   2          case 3:
+ 1883   2          {
+ 1884   3            view_3_handle();
+ 1885   3            break;
+ 1886   3          }
+ 1887   2          case 4:
+ 1888   2          {
+ 1889   3            //开始
+ 1890   3            lcd_clear_simspi(BLACK);
+ 1891   3            delay_ms(100);
+ 1892   3            flag_star = 1;
+ 1893   3            GoalPulseLL = Speed_target ;
+ 1894   3            GoalPulseRR = Speed_target ;
+ 1895   3            if(match==1) Star_handle();
+ 1896   3            EnableGlobalIRQ();
+ 1897   3            break;
+ 1898   3          }
+ 1899   2        }
+ 1900   1      }
+ 1901          void show_dirve()
+ 1902          {
+ 1903   1        char txt[40];
+ 1904   1        if(flag_star == 0)
+ 1905   1        {
+ 1906   2          
+ 1907   2            sprintf(txt," %d %d %d %d     ",AD_V[7],AD_V[8],AD_V[9],AD_V[10]);  // 左   到 右
+ 1908   2          
+ 1909   2            lcd_showstr_simspi(0,0,(char*)txt);
+ 1910   2            
+ 1911   2            switch(Position)
+ 1912   2            {
+ 1913   3              case Normal:
+ 1914   3              {
+ 1915   4                sprintf(txt,"Position: Normal ");
+ 1916   4                break; 
+ 1917   4              }
+ 1918   3              case Round:
+ 1919   3              {
+ 1920   4                sprintf(txt,"Position: Round ");    //赛道元素
+ 1921   4                break;
+ 1922   4              }
+ 1923   3              case Fork_L:
+ 1924   3              {
+ 1925   4                sprintf(txt,"Position: Fork_L "); 
+ 1926   4                break;
+ 1927   4              }
+ 1928   3              case Fork_R:
+ 1929   3              {
+ 1930   4                sprintf(txt,"Position: Fork_R "); 
+ 1931   4                break;
+ 1932   4              }
+ 1933   3              case Cross:
+ 1934   3              {
+ 1935   4                sprintf(txt,"Position: Cross ");  
+ 1936   4                break;
+ 1937   4              }
+ 1938   3              case Descent:
+ 1939   3              {
+ 1940   4                sprintf(txt,"Position: Descent ");  
+ 1941   4                break;
+ 1942   4              }
+ 1943   3            }
+ 1944   2            //sprintf(txt,"P:%.3f I:%.3f    ",Velocity_KP,Velocity_KI); //显示kpki的值  asin(-2 * Q_info.q1 * Q_in
+             -fo.q3 + 2 * Q_info.q0 * Q_info.q2) * 180 / PI
+ 1945   2            lcd_showstr_simspi(0,1,(char*)txt);
+ 1946   2            sprintf(txt,"DIS:%d %d  ",Cross_Process,cnt);//显示编码器的值
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 31  
+
+ 1947   2            lcd_showstr_simspi(0,2,(char*)txt);
+ 1948   2            sprintf(txt,"%02d %02d S:%.2f      ",AD[7],AD[10],input1);//显示电机pwm的值
+ 1949   2            lcd_showstr_simspi(0,3,(char*)txt);
+ 1950   2            sprintf(txt," %d %d %d %d %d        ",AD_V[6],AD_V[5],AD_V[4],AD_V[3],AD_V[2]); // 显示舵机的角度
+ 1951   2            lcd_showstr_simspi(0,4,(char*)txt);
+ 1952   2            sprintf((char*)txt,"%d %d  %02d %02d       ",AD_V[1],AD_V[0],AD[8],AD[9]);  // 显示电感的值
+ 1953   2            lcd_showstr_simspi(0,5,(char*)txt);
+ 1954   2            sprintf(txt,"%02d %02d %02d %02d %02d %02d %02d      ",AD[6],AD[5],AD[4],AD[3],AD[2],AD[1],AD[0]);  // 
+             -显示电感归一化的值
+ 1955   2            lcd_showstr_simspi(0,6,(char*)txt);
+ 1956   2            sprintf((char*)txt,"%d             ",1233); // 显示电感的值
+ 1957   2            lcd_showstr_simspi(0,7,(char*)txt);
+ 1958   2            if(key_read() == 1)
+ 1959   2            {
+ 1960   3                
+ 1961   3              lcd_clear_simspi(BLACK);
+ 1962   3              delay_ms(100);
+ 1963   3              flag_star = 1;
+ 1964   3              GoalPulseLL = Speed_target ;
+ 1965   3              GoalPulseRR = Speed_target ;
+ 1966   3              //EnableGlobalIRQ();
+ 1967   3            }
+ 1968   2          }
+ 1969   1      }
+ 1970          void sss()
+ 1971          {
+ 1972   1            char str[10];
+ 1973   1            sprintf(str,"%d",duojikp_normal_sqrt);  // 显示电感归一化的值
+ 1974   1            lcd_showstr_simspi(0,0,(char*)str);
+ 1975   1      }
+ 1976          void Send_Message(void)//发送信息
+ 1977          {
+ 1978   1        switch(Position)
+ 1979   1        {
+ 1980   2            case Round:
+ 1981   2            {
+ 1982   3              bluetooth_ch9141_send_buff("Round\r\n",6);
+ 1983   3              break;
+ 1984   3            }
+ 1985   2            case Fork_L:
+ 1986   2            {
+ 1987   3              bluetooth_ch9141_send_buff("Fork_L\r\n",7);
+ 1988   3              break;
+ 1989   3            }
+ 1990   2            case Fork_R:
+ 1991   2            {
+ 1992   3              bluetooth_ch9141_send_buff("Fork_R\r\n",7);
+ 1993   3              break;
+ 1994   3            }
+ 1995   2            case Cross:
+ 1996   2            {
+ 1997   3              bluetooth_ch9141_send_buff("Cross\r\n",6);
+ 1998   3              break;
+ 1999   3            }
+ 2000   2            case Descent:
+ 2001   2            {
+ 2002   3              bluetooth_ch9141_send_buff("Descent\r\n",8);
+ 2003   3              break;
+ 2004   3            }
+ 2005   2        }
+ 2006   1      }
+ 2007          void shibie()//识别元素
+ 2008          {
+ 2009   1        if(AD[3]>=circle_max)//判断上坡和圆环
+ 2010   1        {
+ 2011   2      //      if(AD[3]>=99)
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 32  
+
+ 2012   2      //      {
+ 2013   2      //        Position=Descent;
+ 2014   2      //        Descent_Process = Descenting;
+ 2015   2      //        timeout = 0;
+ 2016   2      //      }
+ 2017   2      //      else 
+ 2018   2      //      if(AD[0]+AD[6]>=120)
+ 2019   2      //      {
+ 2020   2              Position=Round;
+ 2021   2              Round_Process=Round_Ining;  
+ 2022   2              cnt_star = 1;
+ 2023   2              cnt = 0;
+ 2024   2              timeout = 0;
+ 2025   2      //      }
+ 2026   2        }
+ 2027   1        else if(AD[3]<93 && (AD[3]+AD[6]+AD[0])>=Cross_sum)//十字
+ 2028   1        {
+ 2029   2          Position=Cross;
+ 2030   2          Cross_Process = Crossing;
+ 2031   2          timeout = 0;
+ 2032   2          cross_cnt++;
+ 2033   2          cnt_star = 1;
+ 2034   2          cnt = 0;
+ 2035   2          if(Speed_target>140)
+ 2036   2          {
+ 2037   3            GoalPulseLL = 140;
+ 2038   3            GoalPulseRR = 140;  
+ 2039   3          }
+ 2040   2      
+ 2041   2        }
+ 2042   1        else if( fork_flag==1&&ad3_grow_flag==0&&AD[3]<=fork_mid_max &&AD[3]>=fork_mid_min && AD[0]>=fork_side_m
+             -in && AD[0]<=fork_side_max && AD[6]>=fork_side_min &&AD[6]<=fork_side_max) // 三岔识别 (AD[3]<=fork_mid_max &&AD[3]>=for
+             -k_mid_min && AD[0]>=fork_side_min && AD[0]<=fork_side_max && AD[6]>=fork_side_min &&AD[6]<=fork_side_max
+ 2043   1        //  && AD[9]>=60 &&AD[9]<90&& AD[8]>=60&&AD[8]<90)||    (AD[7]>=fork_back_side_max&&AD[10]>=fork_back_sid
+             -e_max&&AD[3]<=fork_back_mid_max )
+ 2044   1        {
+ 2045   2          fork_flag = 0;
+ 2046   2          if(count==0)  
+ 2047   2          {
+ 2048   3            Position=Fork_L;
+ 2049   3            GoalPulseLL = Speed_target*0.7;
+ 2050   3            GoalPulseRR = Speed_target*0.7;
+ 2051   3          }
+ 2052   2          else 
+ 2053   2          {
+ 2054   3            Position=Fork_R;
+ 2055   3            GoalPulseLL = Speed_target*0.8;
+ 2056   3            GoalPulseRR = Speed_target*0.6;
+ 2057   3          }
+ 2058   2          Fork_Process =Fork_Ining;
+ 2059   2          timeout = 0;
+ 2060   2          cnt_star = 1;
+ 2061   2          cnt = 0;
+ 2062   2        }
+ 2063   1        else 
+ 2064   1        {
+ 2065   2          Position = Normal;
+ 2066   2          Normal_Process =Normal_ing; 
+ 2067   2        }
+ 2068   1      }
+ 2069          
+*** WARNING C183 IN LINE 710 OF ..\USER\src\isr.c: dead assignment eliminated
+*** WARNING C183 IN LINE 710 OF ..\USER\src\isr.c: dead assignment eliminated
+*** WARNING C183 IN LINE 710 OF ..\USER\src\isr.c: dead assignment eliminated
+*** WARNING C183 IN LINE 710 OF ..\USER\src\isr.c: dead assignment eliminated
+*** WARNING C183 IN LINE 721 OF ..\USER\src\isr.c: dead assignment eliminated
+C251 COMPILER V5.60.0,  isr                                                                17/07/22  02:20:11  PAGE 33  
+
+*** WARNING C183 IN LINE 721 OF ..\USER\src\isr.c: dead assignment eliminated
+*** WARNING C183 IN LINE 721 OF ..\USER\src\isr.c: dead assignment eliminated
+*** WARNING C183 IN LINE 721 OF ..\USER\src\isr.c: dead assignment eliminated
+
+
+Module Information          Static   Overlayable
+------------------------------------------------
+  code size            =     10984     ------
+  ecode size           =    ------     ------
+  data size            =    ------     ------
+  idata size           =    ------     ------
+  pdata size           =    ------     ------
+  xdata size           =    ------     ------
+  xdata-const size     =    ------     ------
+  edata size           =       599         92
+  bit size             =    ------     ------
+  ebit size            =    ------     ------
+  bitaddressable size  =    ------     ------
+  ebitaddressable size =    ------     ------
+  far data size        =    ------     ------
+  huge data size       =    ------     ------
+  const size           =    ------     ------
+  hconst size          =      2030     ------
+End of Module Information.
+
+
+C251 COMPILATION COMPLETE.  26 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,21 @@
+".\Objects\main.obj",
+".\Objects\LQ_ADC.obj",
+".\Objects\LQ_GPIO_EXIT.obj",
+".\Objects\LQ_GPIO_KEY.obj",
+".\Objects\LQ_GPIO_LED.obj",
+".\Objects\LQ_I2C.obj",
+".\Objects\LQ_OLED096.obj",
+".\Objects\LQ_SPI.obj",
+".\Objects\LQ_TIMER.obj",
+".\Objects\LQ_ICM20689.obj",
+".\Objects\LQ_MotorServo.obj",
+".\Objects\LQ_Encoder.obj",
+".\Objects\LQ_UART.obj",
+".\Objects\ANO_DT.obj",
+".\Objects\LQ_SOFTI2C.obj",
+".\Objects\LQ_dianci.obj" 
+TO ".\Objects\LQdemo" 
+PRINT(".\Listings\LQdemo.map") CASE 
+REMOVEUNUSED 
+CLASSES (EDATA (0x0-0x1FFF), 
+HDATA (0x0-0x1FFF)) 
